@@ -10,9 +10,14 @@
 @font-face{font-family:RM;src:url(../../site/fonts/redhatmono-400.woff2);font-weight:400}
 html,body{margin:0;width:100vw;height:100vh;overflow:hidden;background:#c9ccd1;color:#16181d}
 .top{position:absolute;left:64px;top:52px;right:64px;z-index:1}
-.mark{display:flex;align-items:center;gap:16px;font:800 40px/1 U;letter-spacing:-.01em}
-.mark svg{width:64px;height:64px}
-h1{font:800 70px/1.04 U;letter-spacing:-.025em;margin:30px 0 0;max-width:15ch}
+.mark{display:flex;align-items:center;gap:14px;font:800 34px/1 U;letter-spacing:-.01em}
+.mark svg{width:54px;height:54px}
+.board{position:absolute;left:0;top:0;z-index:2;transform-origin:50% 100%}
+.board::before,.board::after{content:"";position:absolute;bottom:0;height:var(--post);width:7px;background:#626d79}
+.board::before{left:calc(50% - 22px)}.board::after{left:calc(50% + 15px);background:#4c5560}
+.panel{background:#16181d;color:#f7f6f2;padding:14px 22px 12px;border-bottom:8px solid #1d3fbf;white-space:nowrap}
+h1{font:800 36px/1.04 U;letter-spacing:-.02em;margin:0}
+.bbs{margin:10px 0 0;font:700 17px/1.2 RM;color:#c3c9d1}.bbs b{color:#9fb3ff}
 .sub{position:absolute;right:64px;top:62px;font:600 21px/1.35 RM;text-align:right;color:#353a43}
 svg#c{position:absolute;left:0;bottom:0;width:100%;overflow:visible}
 svg#c text{font-family:RM;paint-order:stroke;stroke:#c9ccd1;stroke-width:5px;stroke-linejoin:round}
@@ -21,8 +26,8 @@ svg#c text{font-family:RM;paint-order:stroke;stroke:#c9ccd1;stroke-width:5px;str
 </style></head><body>
 <div class="top">
   <div class="mark" id="mk"><svg viewBox="0 0 64 64"><polygon points="1.38,42.3 32,57.62 32,54.71 1.38,39.4" fill="#a5aab1"/><polygon points="62.62,42.3 32,57.62 32,54.71 62.62,39.4" fill="#8e939b"/><polygon points="32,24.09 62.62,39.4 32,54.71 1.38,39.4" fill="#b9bdc3"/><polygon points="5.6,39.4 18.8,46 18.8,32.8 5.6,26.2" fill="#dcdcd8"/><polygon points="32,39.4 18.8,46 18.8,32.8 32,26.2" fill="#bcbdbd"/><polygon points="18.8,19.6 32,26.2 18.8,32.8 5.6,26.2" fill="#f7f6f2"/><polygon points="32,39.4 45.2,46 45.2,32.8 32,26.2" fill="#626d79"/><polygon points="58.4,39.4 45.2,46 45.2,32.8 58.4,26.2" fill="#4c5560"/><polygon points="45.2,19.6 58.4,26.2 45.2,32.8 32,26.2" fill="#7a8693"/><polygon points="18.8,26.2 32,32.8 32,19.6 18.8,13" fill="#17329a"/><polygon points="45.2,26.2 32,32.8 32,19.6 45.2,13" fill="#112676"/><polygon points="32,6.4 45.2,13 32,19.6 18.8,13" fill="#1d3fbf"/></svg>runbill</div>
-  <h1>Who ran up the Actions bill?</h1>
 </div>
+<div class="board" id="board"><div class="panel"><h1>Who ran up the<br>Actions bill?</h1><p class="bbs">iOS <b>$18.60</b> of <b>$47.37</b></p></div></div>
 <p class="sub">billed minutes &amp; cost<br>per workflow, per job<br>CLI + GitHub Action</p>
 <svg id="c"></svg>
 <div class="ground"></div>
@@ -37,11 +42,18 @@ svg#c text{font-family:RM;paint-order:stroke;stroke:#c9ccd1;stroke-width:5px;str
     { name: "Release", jobs: [["package", "linux", 30], ["notarize", "macos", 24]] },
     { name: "Docs", jobs: [["build", "linux", 90]] }];
   if (q.get("docs")) document.getElementById("mk").lastChild.textContent = "runbill docs";
-  var svg = document.getElementById("c");
-  var c = Iso.city(svg, data, { cols: 6, maxH: 250, lot: 40, step: 74, fs: 17, plaza: false, margin: 4, setViewBox: false });
-  var v = c.viewBox, cityH = H * 0.54, scale = Math.min(cityH / v[3], (W - 80) / v[2]), vw = W / scale;
-  cityH = v[3] * scale;
-  var vb = [v[0] + v[2] / 2 - vw / 2 - (W * 0.11) / scale, v[1], vw, v[3] + 22 / scale];
-  svg.setAttribute("viewBox", vb.join(" ")); svg.style.height = (cityH + 22) + "px";
+  var svg = document.getElementById("c"), board = document.getElementById("board"), panel = board.firstChild;
+  var pw = panel.offsetWidth, ph = panel.offsetHeight, post = pw / 4 + 12, E = post + ph + pw / 4 + 14, headroom = 120, ground = 22;
+  var o = { cols: 6, maxH: 250, lot: 40, step: 74, fs: 17, plaza: false, margin: 4, setViewBox: false, skipLabel: 2 };
+  var d = Iso.city(svg, data, Object.assign({ dry: true }, o)), v = d.viewBox, R = d.buildings[2].anchor;
+  var avail = H - ground - 10, bottom = v[1] + v[3];
+  var scale = Math.min((W - 80) / v[2], (avail - headroom) / v[3], (avail - E) / (bottom - R[1]));
+  var c = Iso.city(svg, data, o);
+  var vw = W / scale, vh = avail / scale;
+  var vb = [v[0] + v[2] / 2 - vw / 2, bottom - vh, vw, vh];
+  svg.setAttribute("viewBox", vb.join(" ")); svg.style.height = avail + "px"; svg.style.bottom = ground + "px";
+  var Rx = (R[0] - vb[0]) * scale, Ry = (R[1] - vb[1]) * scale + (H - ground - avail);
+  board.style.setProperty("--post", post + "px"); board.style.paddingBottom = post + "px";
+  board.style.transform = "translate(" + (Rx - pw / 2) + "px," + (Ry - post - ph) + "px) skewY(-26.565deg)";
 </script>
 </body></html>
