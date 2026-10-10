@@ -164,22 +164,28 @@
       if (p < 1) raf = requestAnimationFrame(step);
     })(t0);
   }
-  tourLayout();
   var stops = [].slice.call(document.querySelectorAll(".stop"));
+  // build the survey scene only when it is about to scroll into view (keeps the first paint light)
+  function lazy(el, fn) {
+    if (!IO) return fn();
+    new IntersectionObserver(function (es, o) { if (es[0].isIntersecting) { o.disconnect(); fn(); } }, { rootMargin: "600px 0px" }).observe(el);
+  }
+  lazy(tour, tourLayout);
   function activate(s) {
     stops.forEach(function (x) { x.classList.toggle("on", x === s); });
-    active = +s.getAttribute("data-b"); aim(active);
+    active = +s.getAttribute("data-b"); if (tourCity) aim(active);
   }
   if (IO) {
     var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) activate(e.target); }); }, { rootMargin: "-45% 0px -45% 0px" });
     stops.forEach(function (s) { io.observe(s); });
     if (!reduce) {
-      new IntersectionObserver(function (es, o) { if (es[0].isIntersecting) { o.disconnect(); build(tourCity, true); } }, { threshold: 0.3 }).observe(tour);
+      new IntersectionObserver(function (es, o) { if (es[0].isIntersecting && tourCity) { o.disconnect(); build(tourCity, true); } }, { threshold: 0.3 }).observe(tour);
     }
   } else stops.forEach(function (s) { s.classList.add("on"); });
 
   /* brick conversion: ten billed minutes per runner, same scale */
   var conv = document.getElementById("conv");
+  lazy(conv, function () {
   var RUN = [["linux", "Linux"], ["windows", "Windows"], ["macos", "macOS"]], K = 270 / 0.62, LOT = 46, S = 96, bb = [1e9, 1e9, -1e9, -1e9];
   var cg = I.el("g", {}, conv), convBricks = [];
   RUN.forEach(function (r, i) {
@@ -203,4 +209,5 @@
       convBricks.forEach(function (b) { b.g.style.opacity = ""; drop(b, 100 + b.k * 140, 160 + b.z * 0.3); });
     }, { threshold: 0.35 }).observe(conv);
   }
+  });
 })();
