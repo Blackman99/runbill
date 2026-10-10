@@ -1,0 +1,11 @@
+name: Feature request
+description: Suggest something within GOAL.md (seeing where Actions minutes go)
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes: {label: What question about your Actions minutes can't you answer today?}
+    validations: {required: true}
+  - type: textarea
+    id: idea
+    attributes: {label: What would you like runbill to show?}

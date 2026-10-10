@@ -1,0 +1,29 @@
+site_name: runbill docs
+site_description: Which GitHub Actions workflow and job is eating your minutes? Per-workflow and per-job billed minutes and cost, from the runs API.
+site_url: https://blackman99.github.io/runbill/docs/
+repo_url: https://github.com/Blackman99/runbill
+repo_name: Blackman99/runbill
+edit_uri: edit/main/docs/
+copyright: MIT © 2026 Blackman99
+theme:
+  name: material
+  custom_dir: overrides
+  favicon: assets/logo.svg
+  logo: assets/logo.svg
+  font: false
+  palette:
+    scheme: default
+    primary: custom
+    accent: custom
+  features: [navigation.instant, navigation.top, content.code.copy, search.highlight, toc.follow]
+extra_css: [stylesheets/cab.css]
+nav:
+  - Overview: index.md
+  - Install: install.md
+  - Usage: usage.md
+  - GitHub Action: action.md
+  - Configuration (rates): config.md
+  - Command reference: reference.md
+  - FAQ: faq.md
+  - Home page ↗: https://blackman99.github.io/runbill/
+markdown_extensions: [admonition, attr_list, tables, {toc: {permalink: true}}, pymdownx.highlight, pymdownx.superfences]

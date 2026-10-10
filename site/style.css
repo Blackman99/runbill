@@ -1,0 +1,64 @@
+@font-face{font-family:"Big Shoulders";src:url(fonts/bigshoulders-800.woff2) format("woff2");font-weight:800;font-display:swap}
+@font-face{font-family:"Barlow C";src:url(fonts/barlowc-500.woff2) format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Barlow C";src:url(fonts/barlowc-700.woff2) format("woff2");font-weight:700;font-display:swap}
+:root{--cab:#f2c230;--ink:#1d1a16;--case:#2a2622;--chrome:#c9c6bd;--seg:#e8341c;--off:#4a2420;--paper:#fbf7ec;--pink:#3a352d}
+*{box-sizing:border-box}
+html{background:var(--cab);color:var(--ink)}
+body{margin:0;font-variant-ligatures:none;font:500 1.15rem/1.45 "Barlow C","Arial Narrow",sans-serif;font-variant-numeric:tabular-nums}
+.checker{height:28px;background:conic-gradient(var(--ink) 25%,var(--cab) 0 50%,var(--ink) 0 75%,var(--cab) 0) 0 0/28px 28px}
+h1,h2{font-family:"Big Shoulders",Impact,sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:.01em;line-height:.9;margin:0}
+h1{font-size:clamp(3rem,11vw,7.5rem)}
+h2{font-size:clamp(2rem,6vw,3.2rem);margin-bottom:.6em}
+code{font:700 .95em "Barlow C",sans-serif;background:rgba(29,26,22,.09);padding:0 .25em;border-radius:3px}
+a{color:var(--ink);text-decoration-thickness:2px}
+.door{text-align:center;padding:3rem 1.2rem 1rem;max-width:56rem;margin:0 auto}
+.medallion{display:inline-block;border:2px solid var(--ink);border-radius:999px;padding:.1em .9em;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.85rem}
+.lede{max-width:36rem;margin:1.2rem auto 0;font-size:1.3rem}
+main>section{max-width:46rem;margin:0 auto;padding:2.5rem 1.2rem}
+.cab{text-align:center}
+.meter{display:inline-block;position:relative;padding-top:58px;width:min(100%,520px)}
+.flag{position:absolute;top:0;left:50%;width:150px;margin-left:-75px;height:70px}
+.flag-arm{position:absolute;left:71px;bottom:0;width:8px;height:30px;background:var(--chrome);border-radius:2px}
+.flag-plate{position:absolute;left:0;top:0;width:150px;height:40px;line-height:40px;background:var(--ink);color:var(--cab);font:800 1.5rem "Big Shoulders",Impact,sans-serif;letter-spacing:.06em;border-radius:4px}
+.flag-plate{transition:transform .6s cubic-bezier(.5,1.6,.5,1),background .3s}
+.meter.hired .flag-plate{transform:perspective(300px) rotateX(360deg);background:var(--seg);color:var(--paper)}
+.case{background:var(--case);border-radius:18px;padding:22px;border:6px solid var(--chrome);color:var(--chrome);text-align:left}
+.window{background:#140f0d;border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.unit{font:800 2.4rem "Big Shoulders",Impact,sans-serif;color:var(--seg)}
+.digits{width:100%;height:auto;display:block}
+.digits .s{fill:var(--off)}.digits .on{fill:var(--seg)}
+.sub{display:flex;justify-content:space-between;gap:1rem;margin:14px 2px;font-weight:700}
+.sub small{display:block;font-size:.72rem;letter-spacing:.12em;opacity:.75}
+.sub output{font-size:1.35rem;color:var(--paper)}
+.tariffs{display:flex;gap:10px}
+.tariffs span{flex:1;text-align:center;background:var(--chrome);color:var(--ink);border-radius:4px;padding:4px 0;font-weight:700;font-size:.8rem;letter-spacing:.08em;line-height:1.1;transition:background .2s,transform .2s}
+.tariffs i{font-style:normal;font-size:1.05rem}
+.tariffs span.lit{background:var(--seg);color:var(--paper);transform:translateY(2px)}
+.hail{margin-top:1.4rem;font:800 1.4rem "Big Shoulders",Impact,sans-serif;text-transform:uppercase;background:var(--ink);color:var(--cab);border:0;border-radius:6px;padding:.45em 1.2em;cursor:pointer}
+.hail:focus-visible{outline:3px solid var(--seg);outline-offset:3px}
+.caption{font-size:1rem;margin-top:.6rem}
+.ratecard{background:var(--paper);border:3px solid var(--ink);border-radius:10px;margin-top:1rem!important}
+table{width:100%;border-collapse:collapse;font-size:1.1rem}
+th,td{text-align:left;padding:.45em .4em;border-bottom:2px solid var(--ink)}
+th{font-size:.85rem;letter-spacing:.1em;text-transform:uppercase}
+td:nth-child(3),td:nth-child(4),th:nth-child(3),th:nth-child(4){text-align:right}
+tr.hot td{background:var(--seg);color:var(--paper)}
+tr.hot code{background:none}
+.fine{font-size:.95rem;margin:.8rem 0 0}
+.howto ol{list-style:none;counter-reset:s;padding:0;margin:0}
+.howto li{counter-increment:s;position:relative;padding:.5rem 0 .9rem 4.2rem;border-top:3px solid var(--ink)}
+.howto li::before{content:counter(s);position:absolute;left:0;top:.2rem;font:800 3.2rem/1 "Big Shoulders",Impact,sans-serif}
+.receipt-wrap{text-align:center}
+.receipt{display:inline-block;text-align:left;margin:0;background:var(--paper);color:var(--pink);font:500 1rem/1.35 "Barlow C",sans-serif;padding:1.2rem 1.4rem 1.6rem;max-width:100%;overflow-x:auto;
+  -webkit-mask:linear-gradient(#000 0 0) top/100% calc(100% - 10px) no-repeat,conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/16px 10px repeat-x;
+  mask:linear-gradient(#000 0 0) top/100% calc(100% - 10px) no-repeat,conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/16px 10px repeat-x}
+.receipt .ln{display:grid;grid-template-columns:minmax(0,1fr) 3.4rem 3.8rem;gap:.4rem;opacity:0;transform:translateY(-6px);transition:opacity .2s,transform .2s}
+.receipt .ln.shown{opacity:1;transform:none}
+.ticket pre{background:var(--ink);color:var(--cab);padding:1rem;border-radius:6px;overflow-x:auto}
+.ticket pre code{padding:0;background:none;color:inherit;font-size:1.05rem}
+.links{font-weight:700;font-size:1.3rem}
+footer p{text-align:center;font-weight:700;margin:1rem 0 1.5rem}
+@media (max-width:520px){.case{padding:14px}.sub output{font-size:1.1rem}.howto li{padding-left:3.2rem}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.receipt{width:min(100%,26rem)}.receipt .one{display:block}.receipt .gap{height:.7em}.receipt b{font-weight:500}.receipt em{font-style:normal;text-align:right}.receipt .hd{font-weight:700;letter-spacing:.06em;font-size:.85rem}
+.receipt .ln:first-child{font-weight:700}

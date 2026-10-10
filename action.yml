@@ -1,0 +1,56 @@
+name: "runbill Actions minutes meter"
+description: "Per-workflow and per-job GitHub Actions billed minutes and cost in your job summary, with an optional budget gate."
+author: "Blackman99"
+branding:
+  icon: "clock"
+  color: "yellow"
+inputs:
+  repo:
+    description: "OWNER/REPO to meter (default: this repository)"
+    default: ${{ github.repository }}
+  days:
+    description: "Look back this many days"
+    default: "30"
+  workflow:
+    description: "Only this workflow file (e.g. ci.yml)"
+    default: ""
+  top:
+    description: "Rows per table"
+    default: "10"
+  max-runs:
+    description: "Stop after this many runs"
+    default: "500"
+  fail-over:
+    description: "Fail the step if the estimated total cost (USD) is over this amount"
+    default: ""
+  token:
+    description: "Token with actions:read on the repo"
+    default: ${{ github.token }}
+outputs:
+  report:
+    description: "Path to the JSON report"
+    value: ${{ steps.meter.outputs.report }}
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: python3 -m pip install --quiet --disable-pip-version-check "${{ github.action_path }}"
+    - id: meter
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        IN_REPO: ${{ inputs.repo }}
+        IN_DAYS: ${{ inputs.days }}
+        IN_WF: ${{ inputs.workflow }}
+        IN_TOP: ${{ inputs.top }}
+        IN_MAX: ${{ inputs.max-runs }}
+        IN_FAIL: ${{ inputs.fail-over }}
+      run: |
+        args=("$IN_REPO" --days "$IN_DAYS" --top "$IN_TOP" --max-runs "$IN_MAX")
+        [ -n "$IN_WF" ] && args+=(--workflow "$IN_WF")
+        out="$RUNNER_TEMP/runbill.json"
+        python3 -m runbill report "${args[@]}" --format json -o "$out"
+        echo "report=$out" >> "$GITHUB_OUTPUT"
+        fail=()
+        [ -n "$IN_FAIL" ] && fail=(--fail-over "$IN_FAIL")
+        python3 -m runbill report "${args[@]}" --format md -o "$GITHUB_STEP_SUMMARY" "${fail[@]}"

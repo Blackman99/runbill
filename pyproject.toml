@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "runbill"
+version = "0.1.0"
+description = "Which GitHub Actions workflow and job is eating your minutes? Per-workflow and per-job billed minutes and cost, from the runs API."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Blackman99" }]
+keywords = ["github-actions", "ci", "billing", "cost", "minutes", "finops", "devops", "cli"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Build Tools",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://blackman99.github.io/runbill/"
+Documentation = "https://blackman99.github.io/runbill/docs/"
+Source = "https://github.com/Blackman99/runbill"
+Issues = "https://github.com/Blackman99/runbill/issues"
+
+[project.scripts]
+runbill = "runbill.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/runbill"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "README.md", "LICENSE", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"

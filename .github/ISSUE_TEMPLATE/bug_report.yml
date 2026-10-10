@@ -1,0 +1,19 @@
+name: Bug report
+description: runbill crashed, or billed a job/workflow wrongly
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes: {label: runbill version, placeholder: "runbill --version"}
+    validations: {required: true}
+  - type: input
+    id: command
+    attributes: {label: Command you ran, placeholder: "runbill org/repo --days 7"}
+    validations: {required: true}
+  - type: textarea
+    id: output
+    attributes: {label: Output / error, render: text}
+    validations: {required: true}
+  - type: textarea
+    id: expected
+    attributes: {label: What you expected (e.g. the job's runner labels and real duration)}

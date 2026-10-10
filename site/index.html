@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>runbill: which GitHub Actions workflow is running up your bill?</title>
+<meta name="description" content="runbill reads the Actions runs API and prints billed minutes and cost per workflow and per job, rounded the way GitHub bills. CLI + GitHub Action.">
+<link rel="canonical" href="https://blackman99.github.io/runbill/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="logo-512.png" type="image/png" sizes="512x512">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="runbill">
+<meta property="og:title" content="runbill: which workflow is running up your Actions bill?">
+<meta property="og:description" content="Billed minutes and cost per workflow and per job, from the runs API. CLI + GitHub Action.">
+<meta property="og:url" content="https://blackman99.github.io/runbill/">
+<meta property="og:image" content="https://blackman99.github.io/runbill/og-image.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A yellow-cab taxi meter showing the GitHub Actions fare per workflow">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="runbill: which workflow is running up your Actions bill?">
+<meta name="twitter:description" content="Billed minutes and cost per workflow and per job, from the runs API. CLI + GitHub Action.">
+<meta name="twitter:image" content="https://blackman99.github.io/runbill/og-image.png">
+<meta name="twitter:image:alt" content="A yellow-cab taxi meter showing the GitHub Actions fare per workflow">
+<link rel="preload" href="fonts/bigshoulders-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="checker" aria-hidden="true"></div>
+<header class="door">
+  <p class="medallion">Medallion № 0.1.0 · MIT</p>
+  <h1>Who ran up<br>the Actions bill?</h1>
+  <p class="lede">GitHub shows you one total. <b>runbill</b> puts a meter on every workflow and every job, rounds
+    each job up to the minute the way GitHub bills, and prints the fare.</p>
+</header>
+
+<main>
+<section class="cab" aria-label="Animated taxi meter">
+  <div class="meter" id="meter">
+    <div class="flag" id="flag"><span class="flag-arm"></span><span class="flag-plate" id="flagText">FOR HIRE</span></div>
+    <div class="case">
+      <div class="window">
+        <span class="unit">$</span>
+        <svg id="fare" class="digits" viewBox="0 0 312 80" role="img" aria-label="fare"></svg>
+      </div>
+      <div class="sub">
+        <div><small>BILLED MIN</small><output id="mins">0</output></div>
+        <div><small>WORKFLOW</small><output id="wf">—</output></div>
+      </div>
+      <div class="tariffs" role="list" aria-label="tariff">
+        <span role="listitem" data-sku="linux">LINUX<br><i>.006</i></span>
+        <span role="listitem" data-sku="windows">WIN<br><i>.010</i></span>
+        <span role="listitem" data-sku="macos">MACOS<br><i>.062</i></span>
+      </div>
+    </div>
+  </div>
+  <button class="hail" id="again" type="button">Another ride ↻</button>
+  <p class="caption">Sample month of a small app. Watch what happens when the macOS tariff kicks in.</p>
+</section>
+
+<section class="ratecard" aria-labelledby="rc">
+  <h2 id="rc">Rate card</h2>
+  <table>
+    <thead><tr><th>Tariff</th><th>Runner</th><th>$/min</th><th>Same 10-min job</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Linux 2-core</td><td>0.006</td><td>$0.06</td></tr>
+      <tr><td>1A</td><td>Linux arm64</td><td>0.005</td><td>$0.05</td></tr>
+      <tr><td>2</td><td>Windows 2-core</td><td>0.010</td><td>$0.10</td></tr>
+      <tr class="hot"><td>3</td><td>macOS</td><td>0.062</td><td>$0.62</td></tr>
+      <tr><td>×n</td><td>larger runners (<code>…-8-cores</code>)</td><td>× cores/2</td><td>$0.24 (8-core Linux)</td></tr>
+    </tbody>
+  </table>
+  <p class="fine">List prices; override any of them with <code>--rate macos=0.08</code>. Every started minute is charged, per job.</p>
+</section>
+
+<section class="howto" aria-labelledby="how">
+  <h2 id="how">How the fare is worked out</h2>
+  <ol>
+    <li><b>Pick up.</b> List completed runs in the window from <code>/actions/runs</code> (works on public and private repos, any plan).</li>
+    <li><b>Every leg.</b> Pull all jobs of each run, including earlier attempts, so re-runs show up as their own cost.</li>
+    <li><b>Tariff.</b> Read each job's runner labels: Linux, Windows, macOS, arm, self-hosted, and size from <code>N-cores</code>.</li>
+    <li><b>Round up.</b> Each job is billed in whole minutes. A 40-second lint job is a 1-minute fare.</li>
+    <li><b>Receipt.</b> Rank workflows and jobs by cost, show the re-run share, optionally fail CI over a budget.</li>
+  </ol>
+</section>
+
+<section class="receipt-wrap" aria-labelledby="rcpt">
+  <h2 id="rcpt">The receipt</h2>
+  <div class="receipt" id="receipt" tabindex="0"><span class="ln one">$ runbill your-org/app --days 30</span><span class="ln gap"></span><span class="ln"><b>TOTAL</b><em>2,260 min</em><em>$42.86</em></span><span class="ln one">raw 1,510 min · re-runs 12.6% of cost</span><span class="ln gap"></span><span class="ln hd"><b>BY WORKFLOW</b><em>min</em><em>cost</em></span><span class="ln"><b>CI · 60 runs</b><em>1,400</em><em>$37.80</em></span><span class="ln"><b>E2E nightly · 9</b><em>784</em><em>$4.70</em></span><span class="ln"><b>Docs · 25</b><em>50</em><em>$0.30</em></span><span class="ln"><b>Release · 3</b><em>26</em><em>$0.05</em></span><span class="ln gap"></span><span class="ln hd"><b>TOP JOBS</b><em>min</em><em>cost</em></span><span class="ln"><b>CI › test (macos)</b><em>490</em><em>$30.38</em></span><span class="ln"><b>CI › test (windows)</b><em>490</em><em>$4.90</em></span><span class="ln"><b>E2E nightly › playwright</b><em>784</em><em>$4.70</em></span><span class="ln"><b>CI › test (ubuntu)</b><em>350</em><em>$2.10</em></span><span class="ln gap"></span><span class="ln one">THANK YOU · PLEASE RIDE AGAIN</span></div>
+</section>
+
+<section class="ticket" aria-labelledby="inst">
+  <h2 id="inst">Get in</h2>
+  <p>CLI (Python 3.9+, no dependencies; uses <code>GH_TOKEN</code> or your <code>gh</code> login):</p>
+  <pre><code>pipx install git+https://github.com/Blackman99/runbill
+runbill OWNER/REPO --days 30</code></pre>
+  <p>Or as a step that writes the receipt to the job summary:</p>
+  <pre><code>- uses: Blackman99/runbill@v0.1.0
+  with:
+    days: 30
+    fail-over: 50   # optional budget gate, USD</code></pre>
+  <p class="links"><a href="docs/">Docs</a> · <a href="https://github.com/Blackman99/runbill">GitHub</a> · <a href="docs/faq/">FAQ</a></p>
+</section>
+</main>
+<footer><div class="checker" aria-hidden="true"></div><p>runbill · MIT · estimates at list price, not an invoice</p></footer>
+<script src="app.js" defer></script>
+</body>
+</html>
