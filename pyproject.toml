@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "runbill"
-version = "0.1.0"
+version = "0.1.1"
 description = "Which GitHub Actions workflow and job is eating your minutes? Per-workflow and per-job billed minutes and cost, from the runs API."
 readme = "README.md"
 requires-python = ">=3.9"

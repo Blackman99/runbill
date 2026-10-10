@@ -44,7 +44,7 @@ As a GitHub Action (writes the report to the job summary):
 ```yaml
 permissions: { actions: read, contents: read }
 steps:
-  - uses: Blackman99/runbill@v0.1.0
+  - uses: Blackman99/runbill@v0.1.1
     with: { days: 7, fail-over: 20 }
 ```
 
