@@ -1,0 +1,21 @@
+/* runbill docs: same concrete / ink / cobalt language as the landing page. Fonts live in the site root. */
+@font-face{font-family:"Unbounded";src:url(../../fonts/unbounded.woff2) format("woff2");font-weight:200 900;font-display:swap}
+@font-face{font-family:"Red Hat Text";src:url(../../fonts/redhattext.woff2) format("woff2");font-weight:300 700;font-display:swap}
+@font-face{font-family:"Red Hat Mono";src:url(../../fonts/redhatmono.woff2) format("woff2");font-weight:300 700;font-display:swap}
+:root,[data-md-color-scheme="default"]{
+  --md-primary-fg-color:#16181d;--md-primary-fg-color--light:#353a43;--md-primary-fg-color--dark:#16181d;
+  --md-primary-bg-color:#f7f6f2;--md-accent-fg-color:#1d3fbf;--md-typeset-a-color:#1d3fbf;
+  --md-default-bg-color:#c9ccd1;--md-default-fg-color:#16181d;--md-default-fg-color--light:#353a43;
+  --md-code-bg-color:#b9bdc3;--md-code-fg-color:#16181d;
+  --md-text-font:"Red Hat Text";--md-code-font:"Red Hat Mono";
+  --md-code-hl-number-color:#1d3fbf;--md-code-hl-string-color:#2b4a2f;--md-code-hl-keyword-color:#112676;--md-code-hl-comment-color:#4c5560;
+  --md-admonition-bg-color:#d6d9dd;
+}
+.md-header{box-shadow:none;border-bottom:4px solid #1d3fbf}
+.md-tabs{background:#16181d}
+.md-typeset h1,.md-typeset h2,.md-typeset h3{font-family:"Unbounded",sans-serif;font-weight:700;letter-spacing:-.01em;color:#16181d}
+.md-header__topic:first-child{font-family:"Unbounded",sans-serif;font-weight:700}
+.md-typeset table:not([class]){background:#d6d9dd}
+.md-typeset table:not([class]) th{background:#16181d;color:#f7f6f2}
+.md-typeset code{background:#b9bdc3}
+.md-footer,.md-footer-meta{background:#16181d}

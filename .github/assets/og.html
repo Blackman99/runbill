@@ -1,18 +1,46 @@
-<!doctype html><html><head><meta charset="utf-8"><style>
-@font-face{font-family:BS;src:url(../../site/fonts/bigshoulders-800.woff2)}
-@font-face{font-family:BC;src:url(../../site/fonts/barlowc-700.woff2)}
-html,body{margin:0;width:100vw;height:100vh;overflow:hidden;background:#f2c230;color:#1d1a16;font-family:BC}
-.ck{height:36px;background:conic-gradient(#1d1a16 25%,#f2c230 0 50%,#1d1a16 0 75%,#f2c230 0) 0 0/36px 36px}
-.wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100% - 72px);text-align:center}
-h1{font:800 120px/0.9 BS;margin:0;text-transform:uppercase}
-p{font-size:34px;margin:14px 0 26px}
-.m{background:#2a2622;border:7px solid #c9c6bd;border-radius:18px;padding:16px 26px;display:flex;align-items:center;gap:22px;color:#c9c6bd}
-.d{font:800 92px/1 BS;color:#e8341c;background:#140f0d;padding:4px 18px;border-radius:6px;letter-spacing:.04em}
-.r{text-align:left;font-size:26px;line-height:1.25}.r b{color:#fbf7ec}
-.tag{position:absolute;top:60px;left:60px;border:3px solid #1d1a16;border-radius:99px;padding:4px 18px;font-size:24px;letter-spacing:.1em}
-</style></head><body><div class="ck"></div>
-<span class="tag">RUNBILL</span>
-<div class="wrap"><h1>Who ran up the<br>Actions bill?</h1>
-<p>Billed minutes &amp; cost per workflow and per job · CLI + GitHub Action</p>
-<div class="m"><span class="d">$42.86</span><div class="r">CI › test (macos) <b>$30.38</b><br>E2E nightly <b>$4.70</b><br>re-runs <b>12.6%</b></div></div></div>
-<div class="ck" style="position:absolute;bottom:0;left:0;right:0"></div></body></html>
+<!doctype html>
+<!-- OG / social preview source. Render (from repo root):
+  google-chrome --headless=new --hide-scrollbars --window-size=1200,630 --screenshot=site/og-image.png ".github/assets/og.html?w=1200&h=630"
+  google-chrome --headless=new --hide-scrollbars --window-size=1280,640 --screenshot=site/social-preview.png ".github/assets/og.html?w=1280&h=640"
+  (see .github/assets/render.sh) -->
+<html><head><meta charset="utf-8"><style>
+@font-face{font-family:U;src:url(../../site/fonts/unbounded.woff2);font-weight:200 900}
+@font-face{font-family:RT;src:url(../../site/fonts/redhattext.woff2);font-weight:300 700}
+@font-face{font-family:RM;src:url(../../site/fonts/redhatmono.woff2);font-weight:300 700}
+html,body{margin:0;width:100vw;height:100vh;overflow:hidden;background:#c9ccd1;color:#16181d}
+.top{position:absolute;left:64px;top:52px;right:64px;z-index:1}
+.mark{display:flex;align-items:center;gap:16px;font:800 40px/1 U;letter-spacing:-.01em}
+.mark svg{width:64px;height:64px}
+h1{font:800 70px/1.04 U;letter-spacing:-.025em;margin:30px 0 0;max-width:15ch}
+.sub{position:absolute;right:64px;top:62px;font:600 21px/1.35 RM;text-align:right;color:#353a43}
+svg#c{position:absolute;left:0;bottom:0;width:100%;overflow:visible}
+svg#c text{font-family:RM;paint-order:stroke;stroke:#c9ccd1;stroke-width:5px;stroke-linejoin:round}
+.lbl-v{fill:#1d3fbf;font-weight:700}.lbl-n{fill:#16181d;font-weight:600}
+.ground{position:absolute;left:0;right:0;bottom:0;height:22px;background:#b9bdc3;border-top:1px solid #a5aab1}
+</style></head><body>
+<div class="top">
+  <div class="mark" id="mk"><svg viewBox="0 0 64 64"><polygon points="1.38,42.3 32,57.62 32,54.71 1.38,39.4" fill="#a5aab1"/><polygon points="62.62,42.3 32,57.62 32,54.71 62.62,39.4" fill="#8e939b"/><polygon points="32,24.09 62.62,39.4 32,54.71 1.38,39.4" fill="#b9bdc3"/><polygon points="5.6,39.4 18.8,46 18.8,32.8 5.6,26.2" fill="#dcdcd8"/><polygon points="32,39.4 18.8,46 18.8,32.8 32,26.2" fill="#bcbdbd"/><polygon points="18.8,19.6 32,26.2 18.8,32.8 5.6,26.2" fill="#f7f6f2"/><polygon points="32,39.4 45.2,46 45.2,32.8 32,26.2" fill="#626d79"/><polygon points="58.4,39.4 45.2,46 45.2,32.8 58.4,26.2" fill="#4c5560"/><polygon points="45.2,19.6 58.4,26.2 45.2,32.8 32,26.2" fill="#7a8693"/><polygon points="18.8,26.2 32,32.8 32,19.6 18.8,13" fill="#17329a"/><polygon points="45.2,26.2 32,32.8 32,19.6 45.2,13" fill="#112676"/><polygon points="32,6.4 45.2,13 32,19.6 18.8,13" fill="#1d3fbf"/></svg>runbill</div>
+  <h1>Who ran up the Actions bill?</h1>
+</div>
+<p class="sub">billed minutes &amp; cost<br>per workflow, per job<br>CLI + GitHub Action</p>
+<svg id="c"></svg>
+<div class="ground"></div>
+<script src="../../site/iso.js"></script>
+<script>
+  var q = new URLSearchParams(location.search), W = +(q.get("w") || 1200), H = +(q.get("h") || 630);
+  var data = [
+    { name: "CI", jobs: [["lint", "linux", 140], ["test (ubuntu)", "linux", 1050], ["test (windows)", "windows", 420]] },
+    { name: "Fuzz nightly", jobs: [["libfuzzer", "linux", 1400]] },
+    { name: "iOS", jobs: [["build", "macos", 180], ["ui-tests", "macos", 120]] },
+    { name: "E2E", jobs: [["playwright", "linux", 310, 0.022]] },
+    { name: "Release", jobs: [["package", "linux", 30], ["notarize", "macos", 24]] },
+    { name: "Docs", jobs: [["build", "linux", 90]] }];
+  if (q.get("docs")) document.getElementById("mk").lastChild.textContent = "runbill docs";
+  var svg = document.getElementById("c");
+  var c = Iso.city(svg, data, { cols: 6, maxH: 250, lot: 40, step: 74, fs: 17, plaza: false, margin: 4, setViewBox: false });
+  var v = c.viewBox, cityH = H * 0.54, scale = Math.min(cityH / v[3], (W - 80) / v[2]), vw = W / scale;
+  cityH = v[3] * scale;
+  var vb = [v[0] + v[2] / 2 - vw / 2 - (W * 0.11) / scale, v[1], vw, v[3] + 22 / scale];
+  svg.setAttribute("viewBox", vb.join(" ")); svg.style.height = (cityH + 22) + "px";
+</script>
+</body></html>

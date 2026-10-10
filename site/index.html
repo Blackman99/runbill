@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>runbill: which GitHub Actions workflow is running up your bill?</title>
 <meta name="description" content="runbill reads the Actions runs API and prints billed minutes and cost per workflow and per job, rounded the way GitHub bills. CLI + GitHub Action.">
+<meta name="theme-color" content="#c9ccd1">
 <link rel="canonical" href="https://blackman99.github.io/runbill/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="logo-512.png" type="image/png" sizes="512x512">
+<link rel="apple-touch-icon" href="logo-512.png">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="runbill">
 <meta property="og:title" content="runbill: which workflow is running up your Actions bill?">
@@ -17,94 +19,164 @@
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="A yellow-cab taxi meter showing the GitHub Actions fare per workflow">
+<meta property="og:image:alt" content="An isometric city of GitHub Actions workflows, each building as tall as its bill, with the line: Who ran up the Actions bill?">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="runbill: which workflow is running up your Actions bill?">
 <meta name="twitter:description" content="Billed minutes and cost per workflow and per job, from the runs API. CLI + GitHub Action.">
 <meta name="twitter:image" content="https://blackman99.github.io/runbill/og-image.png">
-<meta name="twitter:image:alt" content="A yellow-cab taxi meter showing the GitHub Actions fare per workflow">
-<link rel="preload" href="fonts/bigshoulders-800.woff2" as="font" type="font/woff2" crossorigin>
+<meta name="twitter:image:alt" content="An isometric city of GitHub Actions workflows, each building as tall as its bill">
+<link rel="preload" href="fonts/unbounded.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/redhattext.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="checker" aria-hidden="true"></div>
-<header class="door">
-  <p class="medallion">Medallion № 0.1.0 · MIT</p>
-  <h1>Who ran up<br>the Actions bill?</h1>
-  <p class="lede">GitHub shows you one total. <b>runbill</b> puts a meter on every workflow and every job, rounds
-    each job up to the minute the way GitHub bills, and prints the fare.</p>
+<header class="bar">
+  <a class="mark" href="./" aria-label="runbill home">
+    <svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><use href="#cubes"/></svg><span>runbill</span>
+  </a>
+  <nav aria-label="Site"><a href="docs/">Docs</a><a href="docs/blog/">Blog</a><a href="https://github.com/Blackman99/runbill">GitHub</a></nav>
 </header>
 
 <main>
-<section class="cab" aria-label="Animated taxi meter">
-  <div class="meter" id="meter">
-    <div class="flag" id="flag"><span class="flag-arm"></span><span class="flag-plate" id="flagText">FOR HIRE</span></div>
-    <div class="case">
-      <div class="window">
-        <span class="unit">$</span>
-        <svg id="fare" class="digits" viewBox="0 0 312 80" role="img" aria-label="fare"></svg>
-      </div>
-      <div class="sub">
-        <div><small>BILLED MIN</small><output id="mins">0</output></div>
-        <div><small>WORKFLOW</small><output id="wf">—</output></div>
-      </div>
-      <div class="tariffs" role="list" aria-label="tariff">
-        <span role="listitem" data-sku="linux">LINUX<br><i>.006</i></span>
-        <span role="listitem" data-sku="windows">WIN<br><i>.010</i></span>
-        <span role="listitem" data-sku="macos">MACOS<br><i>.062</i></span>
-      </div>
-    </div>
+<section class="hero" aria-labelledby="t">
+  <div class="stage"><svg id="city" class="city" role="img" aria-labelledby="cityCap"></svg></div>
+  <div class="sky">
+    <p class="kicker">GitHub Actions minutes &amp; cost, per workflow and per job</p>
+    <h1 id="t">Who ran up the Actions&nbsp;bill?</h1>
+    <p class="lede">GitHub shows you one total. <b>runbill</b> builds every workflow as a building and lays each job's billed minutes
+      as bricks, priced by runner. A macOS minute is ten Linux minutes tall.</p>
   </div>
-  <button class="hail" id="again" type="button">Another ride ↻</button>
-  <p class="caption">Sample month of a small app. Watch what happens when the macOS tariff kicks in.</p>
+  <div class="hud">
+    <p id="cityCap" class="cap"><b id="cityName">a monorepo</b>, 30 days: <output id="cityMin">0</output> billed min,
+      <output id="cityCost" class="usd">$0.00</output></p>
+    <p class="key"><span><i class="sw linux"></i>Linux <code>$0.006</code></span><span><i class="sw windows"></i>Windows <code>$0.010</code></span><span><i class="sw macos"></i>macOS <code>$0.062</code></span><span class="per">per min</span></p>
+    <button id="again" class="brickbtn" type="button">Pour another city <span aria-hidden="true">↻</span></button>
+  </div>
 </section>
 
-<section class="ratecard" aria-labelledby="rc">
-  <h2 id="rc">Rate card</h2>
-  <table>
-    <thead><tr><th>Tariff</th><th>Runner</th><th>$/min</th><th>Same 10-min job</th></tr></thead>
-    <tbody>
-      <tr><td>1</td><td>Linux 2-core</td><td>0.006</td><td>$0.06</td></tr>
-      <tr><td>1A</td><td>Linux arm64</td><td>0.005</td><td>$0.05</td></tr>
-      <tr><td>2</td><td>Windows 2-core</td><td>0.010</td><td>$0.10</td></tr>
-      <tr class="hot"><td>3</td><td>macOS</td><td>0.062</td><td>$0.62</td></tr>
-      <tr><td>L</td><td>Linux 8-core (larger runner)</td><td>0.022</td><td>$0.22</td></tr>
-      <tr><td>S</td><td>Linux 1-core (<code>ubuntu-slim</code>)</td><td>0.002</td><td>$0.02</td></tr>
-    </tbody>
-  </table>
-  <p class="fine"><a href="https://docs.github.com/en/billing/reference/actions-runner-pricing">GitHub list prices</a>, every larger-runner size included; override any of them with <code>--rate macos=0.08</code>. Every started minute is charged, per job.</p>
+<section class="survey" aria-labelledby="sv">
+  <div class="survey-head">
+    <h2 id="sv">Survey of <code>example/app</code></h2>
+    <p>The same month <code>runbill demo</code> prints below. Scroll and the camera walks the street.</p>
+  </div>
+  <div class="survey-body">
+    <div class="pin"><svg id="tour" class="city tour" role="img" aria-label="example/app as four buildings: CI is a tower of $37.80, E2E nightly $4.31, Docs $0.30, Release $0.05"></svg></div>
+    <ol class="stops">
+      <li class="stop" data-b="-1">
+        <h3>Four workflows, 30 days</h3>
+        <dl class="legend"><div><dt>runs</dt><dd>97</dd></div><div><dt>jobs</dt><dd>320</dd></div><div><dt>billed min</dt><dd>1,672</dd></div><div><dt>cost</dt><dd class="usd">$42.47</dd></div></dl>
+        <p>Height is money, not time. Most of these minutes are cheap Linux slabs; one building is not.</p>
+      </li>
+      <li class="stop" data-b="0">
+        <h3><i class="sw macos"></i>CI <small>60 runs</small></h3>
+        <dl class="legend jobs">
+          <div><dt>test (macos)</dt><dd>490 min</dd><dd class="usd">$30.38</dd></div>
+          <div><dt>test (windows)</dt><dd>490 min</dd><dd class="usd">$4.90</dd></div>
+          <div><dt>test (ubuntu)</dt><dd>350 min</dd><dd class="usd">$2.10</dd></div>
+          <div><dt>lint</dt><dd>70 min</dd><dd class="usd">$0.42</dd></div>
+          <div class="sum"><dt>rooftop</dt><dd>1,400 min</dd><dd class="usd">$37.80</dd></div>
+        </dl>
+        <p>The macOS leg is 29% of the month's minutes and 72% of its bill. Same 490 minutes on Windows: one sixth of the height.</p>
+      </li>
+      <li class="stop" data-b="1">
+        <h3><i class="sw linux"></i>E2E nightly <small>9 runs</small></h3>
+        <dl class="legend jobs">
+          <div><dt>playwright <span class="tag">linux 8-core</span></dt><dd>196 min</dd><dd class="usd">$4.31</dd></div>
+        </dl>
+        <p>A larger runner. At $0.022 a minute each Linux brick here is 3.7 times as tall as a 2-core one; runbill reads the size from the runner labels.</p>
+      </li>
+      <li class="stop" data-b="2">
+        <h3><i class="sw linux"></i>Docs <small>25 runs</small></h3>
+        <dl class="legend jobs">
+          <div><dt>build</dt><dd>50 min</dd><dd class="usd">$0.30</dd></div>
+        </dl>
+        <p>Twenty-five runs and it is a paving slab. Every job still rounds up to a whole minute.</p>
+      </li>
+      <li class="stop" data-b="3">
+        <h3><i class="sw linux"></i>Release <small>3 runs</small></h3>
+        <dl class="legend jobs">
+          <div><dt>publish</dt><dd>9 min</dd><dd class="usd">$0.05</dd></div>
+          <div><dt>sign <span class="tag">self-hosted</span></dt><dd>17 min</dd><dd class="usd">$0.00</dd></div>
+        </dl>
+        <p>Self-hosted minutes are counted but cost nothing, so they add no height.</p>
+      </li>
+    </ol>
+  </div>
 </section>
 
-<section class="howto" aria-labelledby="how">
-  <h2 id="how">How the fare is worked out</h2>
+<section class="convert" aria-labelledby="cv">
+  <h2 id="cv">Brick conversion</h2>
+  <p class="intro">Ten billed minutes of each runner, one brick per minute, drawn to the same scale.</p>
+  <svg id="conv" class="conv" role="img" aria-label="Ten minutes of Linux is a stack 10 units tall costing $0.06; Windows 17 units, $0.10; macOS 103 units, $0.62"></svg>
+  <dl class="rates legend">
+    <div><dt><i class="sw linux"></i>Linux 2-core</dt><dd>$0.006</dd></div>
+    <div><dt><i class="sw linux"></i>Linux arm64</dt><dd>$0.005</dd></div>
+    <div><dt><i class="sw linux"></i>Linux 1-core <code>ubuntu-slim</code></dt><dd>$0.002</dd></div>
+    <div><dt><i class="sw linux"></i>Linux 8-core</dt><dd>$0.022</dd></div>
+    <div><dt><i class="sw windows"></i>Windows 2-core</dt><dd>$0.010</dd></div>
+    <div><dt><i class="sw macos"></i>macOS</dt><dd>$0.062</dd></div>
+  </dl>
+  <p class="fine"><a href="https://docs.github.com/en/billing/reference/actions-runner-pricing">GitHub list prices</a> per minute, every larger-runner size included; override any of them with <code>--rate macos=0.08</code>.
+    A 40-second job lays a whole brick: GitHub bills each job in started minutes.</p>
+</section>
+
+<section class="storeys" aria-labelledby="hw">
+  <h2 id="hw">How the building is measured</h2>
   <ol>
-    <li><b>Pick up.</b> List completed runs in the window from <code>/actions/runs</code> (works on public and private repos, any plan).</li>
-    <li><b>Every leg.</b> Pull all jobs of each run, including earlier attempts, so re-runs show up as their own cost.</li>
-    <li><b>Tariff.</b> Read each job's runner labels: Linux, Windows, macOS, arm, self-hosted, and size (<code>N-cores</code>, macOS <code>large</code>/<code>xlarge</code>, <code>ubuntu-slim</code>) at its own published rate.</li>
-    <li><b>Round up.</b> Each job is billed in whole minutes. A 40-second lint job is a 1-minute fare.</li>
-    <li><b>Receipt.</b> Rank workflows and jobs by cost, show the re-run share, optionally fail CI over a budget.</li>
+    <li><b>Site.</b> List completed runs in the window from <code>/actions/runs</code>. Public and private repos, any plan.</li>
+    <li><b>Every job.</b> Pull all jobs of each run, earlier attempts included, so re-runs show up as their own cost.</li>
+    <li><b>Material.</b> Read each job's runner labels: Linux, Windows, macOS, arm, self-hosted, and size (<code>N-cores</code>, macOS <code>large</code>/<code>xlarge</code>, <code>ubuntu-slim</code>) at its published rate.</li>
+    <li><b>Round up.</b> Each job is billed in whole minutes. A 40-second lint job is a one-minute brick.</li>
+    <li><b>Rooftop.</b> Rank workflows and jobs by cost, show the re-run share, and optionally fail CI over a budget.</li>
   </ol>
 </section>
 
-<section class="receipt-wrap" aria-labelledby="rcpt">
-  <h2 id="rcpt">The receipt</h2>
-  <div class="receipt" id="receipt" tabindex="0"><span class="ln one">$ runbill your-org/app --days 30</span><span class="ln gap"></span><span class="ln"><b>TOTAL</b><em>1,672 min</em><em>$42.47</em></span><span class="ln one">raw 1,510 min · re-runs 12.7% of cost</span><span class="ln gap"></span><span class="ln hd"><b>BY WORKFLOW</b><em>min</em><em>cost</em></span><span class="ln"><b>CI · 60 runs</b><em>1,400</em><em>$37.80</em></span><span class="ln"><b>E2E nightly · 9</b><em>196</em><em>$4.31</em></span><span class="ln"><b>Docs · 25</b><em>50</em><em>$0.30</em></span><span class="ln"><b>Release · 3</b><em>26</em><em>$0.05</em></span><span class="ln gap"></span><span class="ln hd"><b>TOP JOBS</b><em>min</em><em>cost</em></span><span class="ln"><b>CI › test (macos)</b><em>490</em><em>$30.38</em></span><span class="ln"><b>CI › test (windows)</b><em>490</em><em>$4.90</em></span><span class="ln"><b>E2E nightly › playwright</b><em>196</em><em>$4.31</em></span><span class="ln"><b>CI › test (ubuntu)</b><em>350</em><em>$2.10</em></span><span class="ln gap"></span><span class="ln one">THANK YOU · PLEASE RIDE AGAIN</span></div>
+<section class="report" aria-labelledby="rp">
+  <h2 id="rp">What it prints</h2>
+  <pre class="term" tabindex="0"><code><span class="p">$</span> runbill example/app --days 30
+runbill · example/app · runs since 2026-10-01 (97 runs, 320 jobs)
+
+  TOTAL          1,672 billed min       <b>$42.47</b>   (raw 1,510 min, re-runs 12.7%)
+
+  BY WORKFLOW                              runs    billed min        cost   share
+  CI                                          60         1,400      <b>$37.80</b>   89.0%
+  E2E nightly                                  9           196       $4.31   10.2%
+  Docs                                        25            50       $0.30    0.7%
+  Release                                      3            26       $0.05    0.1%
+
+  TOP JOBS                                 jobs    billed min        cost
+  CI › test (macos)                           70           490      <b>$30.38</b>
+  CI › test (windows)                         70           490       $4.90
+  E2E nightly › playwright                     9           196       $4.31
+  CI › test (ubuntu)                          70           350       $2.10</code></pre>
 </section>
 
-<section class="ticket" aria-labelledby="inst">
-  <h2 id="inst">Get in</h2>
-  <p>CLI (Python 3.9+, no dependencies; uses <code>GH_TOKEN</code> or your <code>gh</code> login):</p>
-  <pre><code>pipx install git+https://github.com/Blackman99/runbill
+<section class="install" aria-labelledby="in">
+  <h2 id="in">Break ground</h2>
+  <div class="cols">
+    <div>
+      <p>CLI. Python 3.9+, no dependencies; uses <code>GH_TOKEN</code> or your <code>gh</code> login.</p>
+      <pre class="term"><code>pipx install git+https://github.com/Blackman99/runbill
 runbill OWNER/REPO --days 30</code></pre>
-  <p>Or as a step that writes the receipt to the job summary:</p>
-  <pre><code>- uses: Blackman99/runbill@v0.1.0
+    </div>
+    <div>
+      <p>Action. Writes the report to the job summary.</p>
+      <pre class="term"><code>- uses: Blackman99/runbill@v0.1.0
   with:
     days: 30
     fail-over: 50   # optional budget gate, USD</code></pre>
-  <p class="links"><a href="docs/">Docs</a> · <a href="https://github.com/Blackman99/runbill">GitHub</a> · <a href="docs/faq/">FAQ</a></p>
+    </div>
+  </div>
+  <p class="links"><a href="docs/">Docs</a><a href="docs/faq/">FAQ</a><a href="https://github.com/Blackman99/runbill">GitHub</a></p>
 </section>
 </main>
-<footer><div class="checker" aria-hidden="true"></div><p>runbill · MIT · estimates at list price, not an invoice</p></footer>
+
+<footer><p>runbill · MIT · estimates at list price, not an invoice</p></footer>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="cubes" viewBox="0 0 64 64"><polygon points="1.38,42.3 32,57.62 32,54.71 1.38,39.4" fill="#a5aab1"/><polygon points="62.62,42.3 32,57.62 32,54.71 62.62,39.4" fill="#8e939b"/><polygon points="32,24.09 62.62,39.4 32,54.71 1.38,39.4" fill="#b9bdc3"/><polygon points="5.6,39.4 18.8,46 18.8,32.8 5.6,26.2" fill="#dcdcd8"/><polygon points="32,39.4 18.8,46 18.8,32.8 32,26.2" fill="#bcbdbd"/><polygon points="18.8,19.6 32,26.2 18.8,32.8 5.6,26.2" fill="#f7f6f2"/><polygon points="32,39.4 45.2,46 45.2,32.8 32,26.2" fill="#626d79"/><polygon points="58.4,39.4 45.2,46 45.2,32.8 58.4,26.2" fill="#4c5560"/><polygon points="45.2,19.6 58.4,26.2 45.2,32.8 32,26.2" fill="#7a8693"/><polygon points="18.8,26.2 32,32.8 32,19.6 18.8,13" fill="#17329a"/><polygon points="45.2,26.2 32,32.8 32,19.6 45.2,13" fill="#112676"/><polygon points="32,6.4 45.2,13 32,19.6 18.8,13" fill="#1d3fbf"/></symbol>
+</svg>
+<script src="iso.js" defer></script>
 <script src="app.js" defer></script>
 </body>
 </html>
