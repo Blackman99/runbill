@@ -25,5 +25,9 @@ nav:
   - Configuration (rates): config.md
   - Command reference: reference.md
   - FAQ: faq.md
+  - Blog:
+    - All posts: blog/index.md
+    - "GitHub took away per-workflow minutes": blog/per-workflow-minutes.md
+    - "GitHub 拿走了按 workflow 统计的分钟数": blog/per-workflow-minutes-zh.md
   - Home page ↗: https://blackman99.github.io/runbill/
 markdown_extensions: [admonition, attr_list, tables, {toc: {permalink: true}}, pymdownx.highlight, pymdownx.superfences]
