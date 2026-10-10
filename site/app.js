@@ -130,7 +130,8 @@
     busy = true;
     knockDown(function () { cur = (cur + 1) % CITIES.length; showHero(!reduce); if (reduce) busy = false; });
   });
-  showHero(!reduce);
+  // measure and build after the first paint, so the script never forces the page's initial layout
+  requestAnimationFrame(function () { setTimeout(function () { showHero(!reduce); }, 0); });
   var rt;
   addEventListener("resize", function () {
     clearTimeout(rt);

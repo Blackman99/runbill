@@ -1,7 +1,10 @@
 /* runbill docs: same concrete / ink / cobalt language as the landing page. Fonts live in the site root. */
-@font-face{font-family:"Unbounded";src:url(../../fonts/unbounded.woff2) format("woff2");font-weight:200 900;font-display:swap}
-@font-face{font-family:"Red Hat Text";src:url(../../fonts/redhattext.woff2) format("woff2");font-weight:300 700;font-display:swap}
-@font-face{font-family:"Red Hat Mono";src:url(../../fonts/redhatmono.woff2) format("woff2");font-weight:300 700;font-display:swap}
+@font-face{font-family:"Unbounded";src:url(../../fonts/unbounded-700.woff2) format("woff2");font-weight:500 749;font-display:swap}
+@font-face{font-family:"Unbounded";src:url(../../fonts/unbounded-800.woff2) format("woff2");font-weight:750 900;font-display:swap}
+@font-face{font-family:"Red Hat Text";src:url(../../fonts/redhattext-400.woff2) format("woff2");font-weight:300 549;font-display:swap}
+@font-face{font-family:"Red Hat Text";src:url(../../fonts/redhattext-700.woff2) format("woff2");font-weight:550 800;font-display:swap}
+@font-face{font-family:"Red Hat Mono";src:url(../../fonts/redhatmono-400.woff2) format("woff2");font-weight:300 549;font-display:swap}
+@font-face{font-family:"Red Hat Mono";src:url(../../fonts/redhatmono-700.woff2) format("woff2");font-weight:550 800;font-display:swap}
 :root,[data-md-color-scheme="default"]{
   --md-primary-fg-color:#16181d;--md-primary-fg-color--light:#353a43;--md-primary-fg-color--dark:#16181d;
   --md-primary-bg-color:#f7f6f2;--md-accent-fg-color:#1d3fbf;--md-typeset-a-color:#1d3fbf;

@@ -27,9 +27,9 @@ Every face is a single flat fill. No gradients, no glow, no shadows except the f
 No yellow, no red, nothing warm.
 
 ## Type (self-hosted, OFL, subset to Latin)
-- **Unbounded** (variable, 500-800): wide geometric display for headings and the big numbers.
-- **Red Hat Text** (variable): body copy.
-- **Red Hat Mono** (variable): minutes, dollars, commands, CLI output.
+- **Unbounded** (static 700 and 800 instances): wide geometric display for headings and the big numbers.
+- **Red Hat Text** (400, 700): body copy.
+- **Red Hat Mono** (400, 700): minutes, dollars, commands, CLI output.
 
 ## Texture and rendering
 Isometric 3D blocks drawn as SVG polygons from a tiny projection helper (`iso.js`, ~2 KB, no framework):
