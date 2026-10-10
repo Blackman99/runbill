@@ -16,7 +16,7 @@ def _note(r: Report) -> str:
     if r.private is False:
         return ("Public repo: standard GitHub-hosted runners are free here. Figures show what these "
                 "minutes would cost at list price on a private repo.")
-    return "List-price estimate. Jobs rounded up to whole minutes; size multiplier from runner labels."
+    return "List-price estimate. Jobs rounded up to whole minutes; runner type and size from labels."
 
 
 def text(r: Report, top: int = 10) -> str:

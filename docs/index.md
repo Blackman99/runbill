@@ -6,7 +6,7 @@ runbill rebuilds that breakdown from the ordinary runs and jobs API:
 
 - billed minutes and estimated cost **per workflow** and **per job**
 - each job **rounded up to the whole minute**, the way GitHub bills
-- runner tariff from labels: Linux, Windows, macOS, arm64, larger `N-cores` runners, self-hosted
+- runner tariff from labels at GitHub's published rates: Linux, Windows, macOS, arm64, 1-core `ubuntu-slim`, larger runners (`N-cores`, macOS `large`/`xlarge`, GPU), self-hosted
 - **re-run share**: how much of the bill came from retrying failed attempts
 - text, Markdown (job summary), JSON and CSV output; optional `--fail-over` budget gate
 - no dependencies, Python 3.9+, uses `GH_TOKEN` or your `gh` login

@@ -76,7 +76,7 @@ def main(argv=None) -> int:
         return 0
     if a.cmd == "rates":
         for k, v in DEFAULT_RATES.items():
-            print(f"{k:<12} ${v:.3f}/min")
+            print(f"{k:<20} ${v:.3f}/min")
         return 0
     if a.cmd == "demo":
         from .demo import sample

@@ -7,18 +7,52 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, Iterable, List, Optional
 
-# USD per minute for GitHub-hosted standard runners (list price, 2-core Linux/Windows,
-# 3/4-core macOS). Override with --rate os=price. Check https://docs.github.com/billing.
+# USD per minute at GitHub list price, from the Actions runner pricing reference:
+# https://docs.github.com/en/billing/reference/actions-runner-pricing (checked 2026-10-10).
+# Keys are runbill SKU names (GitHub billing SKU in the comment). Override with --rate SKU=price.
 DEFAULT_RATES: Dict[str, float] = {
-    "linux": 0.006,
-    "linux-arm": 0.005,
-    "windows": 0.010,
-    "windows-arm": 0.010,
-    "macos": 0.062,
+    # standard runners
+    "linux": 0.006,              # actions_linux (2-core x64)
+    "linux-slim": 0.002,         # actions_linux_slim (1-core x64, label ubuntu-slim)
+    "linux-arm": 0.005,          # actions_linux_arm (2-core arm64)
+    "windows": 0.010,            # actions_windows (2-core x64)
+    "windows-arm": 0.010,        # actions_windows_arm (2-core arm64)
+    "macos": 0.062,              # actions_macos (3/4-core)
+    # x64 larger runners
+    "linux-4-core": 0.012,       # linux_4_core
+    "linux-8-core": 0.022,       # linux_8_core
+    "linux-16-core": 0.042,      # linux_16_core
+    "linux-32-core": 0.082,      # linux_32_core
+    "linux-64-core": 0.162,      # linux_64_core
+    "linux-96-core": 0.252,      # linux_96_core
+    "windows-4-core": 0.022,     # windows_4_core
+    "windows-8-core": 0.042,     # windows_8_core
+    "windows-16-core": 0.082,    # windows_16_core
+    "windows-32-core": 0.162,    # windows_32_core
+    "windows-64-core": 0.322,    # windows_64_core
+    "windows-96-core": 0.552,    # windows_96_core
+    "macos-large": 0.077,        # macos_l (12-core Intel, labels macos-*-large)
+    "macos-xlarge": 0.102,       # macos_xl (5-core M2 Pro, labels macos-*-xlarge)
+    # arm64 larger runners
+    "linux-arm-4-core": 0.008,   # linux_4_core_arm
+    "linux-arm-8-core": 0.014,   # linux_8_core_arm
+    "linux-arm-16-core": 0.026,  # linux_16_core_arm
+    "linux-arm-32-core": 0.050,  # linux_32_core_arm
+    "linux-arm-64-core": 0.098,  # linux_64_core_arm
+    "windows-arm-2-core": 0.008,   # windows_2_core_arm
+    "windows-arm-4-core": 0.014,   # windows_4_core_arm
+    "windows-arm-8-core": 0.026,   # windows_8_core_arm
+    "windows-arm-16-core": 0.050,  # windows_16_core_arm
+    "windows-arm-32-core": 0.098,  # windows_32_core_arm
+    "windows-arm-64-core": 0.194,  # windows_64_core_arm
+    # GPU larger runners
+    "linux-gpu": 0.052,          # linux_4_core_gpu
+    "windows-gpu": 0.102,        # windows_4_core_gpu
+    # not billed by GitHub
     "self-hosted": 0.0,
 }
 
-_CORES = re.compile(r"(\d+)[-_]?(?:core|cores|cpu|vcpu)\b", re.I)
+_CORES = re.compile(r"(\d+)[-_]?(?:core|cores|cpu|cpus|vcpu|vcpus)\b", re.I)
 
 
 def parse_time(s: Optional[str]) -> Optional[datetime]:
@@ -28,27 +62,45 @@ def parse_time(s: Optional[str]) -> Optional[datetime]:
 
 
 def classify_runner(job: dict) -> tuple:
-    """Return (sku, multiplier) for a job, e.g. ("linux", 1.0) or ("linux", 4.0) for 8-core."""
+    """Return (sku, multiplier) for a job.
+
+    The SKU is a key of DEFAULT_RATES, e.g. ("linux", 1.0), ("linux-8-core", 1.0), ("macos-xlarge", 1.0).
+    Larger runners get GitHub's published per-size rate. Only a core count with no published row
+    (e.g. a 12-core Linux label) falls back to the base SKU times cores/2.
+    """
     labels = [str(x).lower() for x in (job.get("labels") or [])]
     group = (job.get("runner_group_name") or "").lower()
     name = (job.get("runner_name") or "").lower()
     joined = " ".join(labels)
     if "self-hosted" in labels or (group and group not in ("github actions", "default", "")
                                    and not name.startswith("github actions")
-                                   and not any(re.match(r"(ubuntu|windows|macos)", x) for x in labels)):
+                                   and not any(re.match(r"(ubuntu|windows|macos|xcode)", x) for x in labels)):
         return "self-hosted", 1.0
-    if "macos" in joined or "mac" in labels:
+    if "macos" in joined or "mac" in labels or any(x.startswith("xcode-") for x in labels):
+        if re.search(r"(^|[-_ ])xlarge\b", joined):
+            return "macos-xlarge", 1.0
+        if re.search(r"(^|[-_ ])large\b", joined):
+            return "macos-large", 1.0
         return "macos", 1.0
+    if "ubuntu-slim" in labels:
+        return "linux-slim", 1.0
     arm = "arm" in joined
-    if "windows" in joined:
-        sku = "windows-arm" if arm else "windows"
-    else:
-        sku = "linux-arm" if arm else "linux"
-    mult = 1.0
+    os_ = "windows" if "windows" in joined else "linux"
+    base = f"{os_}-arm" if arm else os_
+    if "gpu" in joined:
+        return f"{os_}-gpu", 1.0
     m = _CORES.search(joined)
-    if m:
-        mult = max(1.0, int(m.group(1)) / 2.0)
-    return sku, mult
+    if not m:
+        return base, 1.0
+    cores = int(m.group(1))
+    if cores == 1 and os_ == "linux" and not arm:
+        return "linux-slim", 1.0
+    if cores <= 2 and not (os_ == "windows" and arm):
+        return base, 1.0  # 2-core larger runners cost the same as standard ones
+    sized = f"{base}-{cores}-core"
+    if sized in DEFAULT_RATES:
+        return sized, 1.0
+    return base, max(1.0, cores / 2.0)
 
 
 def job_seconds(job: dict) -> float:
@@ -64,7 +116,7 @@ class Line:
     runs: int = 0
     jobs: int = 0
     seconds: float = 0.0
-    billed_minutes: float = 0.0  # rounded up per job, times size multiplier
+    billed_minutes: float = 0.0  # rounded up per job (times a fallback size multiplier, if any)
     cost: float = 0.0
     rerun_cost: float = 0.0
     by_sku: Dict[str, float] = field(default_factory=dict)

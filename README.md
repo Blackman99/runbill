@@ -26,11 +26,11 @@ Uses `GH_TOKEN` / `GITHUB_TOKEN` or your `gh` login (needs `actions:read`).
 $ runbill your-org/app --days 30
 runbill · your-org/app · runs since 2026-09-10 (97 runs, 320 jobs)
 
-  TOTAL          2,260 billed min       $42.86   (raw 1,510 min, re-runs 12.6%)
+  TOTAL          1,672 billed min       $42.47   (raw 1,510 min, re-runs 12.7%)
 
   BY WORKFLOW                              runs    billed min        cost   share
-  CI                                          60         1,400      $37.80   88.2%
-  E2E nightly                                  9           784       $4.70   11.0%
+  CI                                          60         1,400      $37.80   89.0%
+  E2E nightly                                  9           196       $4.31   10.2%
   ...
   TOP 8 JOBS                               jobs    billed min        cost
   CI › test (macos)                           70           490      $30.38
