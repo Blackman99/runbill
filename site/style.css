@@ -43,6 +43,7 @@ h1{font-size:clamp(2.1rem,5.6vw,5.2rem);font-weight:800;letter-spacing:-.025em}
 .city text{font-family:var(--mono);paint-order:stroke;stroke:var(--concrete);stroke-width:4px;stroke-linejoin:round}
 .city .lead{stroke:var(--ink);stroke-width:1;vector-effect:non-scaling-stroke}
 .lbl{transition:transform .18s ease-out}
+.pending .brick{visibility:hidden}
 .lbl-v{fill:var(--cobalt);font-weight:700}
 .lbl-n{fill:var(--ink);font-weight:600}
 .hud{grid-row:3;display:flex;flex-wrap:wrap;align-items:center;gap:10px 28px;padding:14px var(--pad) 22px;background:var(--concrete);border-top:2px solid var(--ink);font-size:.95rem}

@@ -15,6 +15,7 @@
   function P(x, y, z) { return [x - y, (x + y) / 2 - z]; }
   var I_P = P;
   function el(tag, attrs, parent) {
+    if (parent === null) return null;   // dry run: geometry only, no DOM
     var e = document.createElementNS(NS, tag);
     for (var k in attrs) e.setAttribute(k, attrs[k]);
     if (parent) parent.appendChild(e);
@@ -30,6 +31,7 @@
   function box(parent, x, y, z, w, d, h, pal, cls, bb) {
     var g = el("g", cls ? { "class": cls } : {}, parent);
     var X = x + w, Y = y + d, Z = z + h;
+    if (g === null) { pts([[x, Y, z], [X, Y, z], [X, y, z], [X, y, Z], [x, y, Z], [x, Y, Z]], bb); return null; }
     el("polygon", { points: pts([[x, Y, z], [X, Y, z], [X, Y, Z], [x, Y, Z]], bb), fill: pal[1] }, g);
     el("polygon", { points: pts([[X, y, z], [X, Y, z], [X, Y, Z], [X, y, Z]], bb), fill: pal[2] }, g);
     el("polygon", { points: pts([[x, y, Z], [X, y, Z], [X, Y, Z], [x, Y, Z]], bb), fill: pal[0] }, g);
@@ -45,7 +47,8 @@
            labels (bool), fs (label font size, user units), plaza (bool) */
   function city(svg, data, o) {
     o = o || {};
-    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var dry = !!o.dry;
+    if (!dry) while (svg.firstChild) svg.removeChild(svg.firstChild);
     var lot = o.lot || 40, step = o.step || 66, maxH = o.maxH || 300, cols = o.cols || data.length;
     var fs = o.fs || 13, bb = [1e9, 1e9, -1e9, -1e9];
     var maxCost = Math.max.apply(null, data.map(cost)) || 1;
@@ -58,7 +61,7 @@
       return { w: w, i: i, r: r, x: x, y: y, cost: cost(w), min: minutes(w) };
     });
     var order = B.slice().sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
-    var scene = el("g", { "class": "scene" }, svg);
+    var scene = dry ? null : el("g", { "class": "scene" }, svg);
     if (o.plaza !== false) {
       var xs = B.map(function (b) { return b.x; }), ys = B.map(function (b) { return b.y; });
       var pad = step * 0.55;
@@ -67,7 +70,7 @@
       box(scene, x0, y0, -12, x1 - x0, y1 - y0, 12, PAL.plaza, "plaza", bb);
     }
     order.forEach(function (b) {
-      var g = el("g", { "class": "bldg", "data-i": b.i }, scene);
+      var g = dry ? null : el("g", { "class": "bldg", "data-i": b.i }, scene);
       box(g, b.x - 4, b.y - 4, 0, lot + 8, lot + 8, 2, PAL.lot, "pad", bb);
       var z = 2, bricks = [];
       b.w.jobs.forEach(function (j) {
@@ -87,7 +90,7 @@
       b.foot = P(b.x + lot, b.y + lot, 0);
     });
     if (o.labels !== false) {
-      var lg = el("g", { "class": "labels" }, scene), placed = [];
+      var lg = dry ? null : el("g", { "class": "labels" }, scene), placed = [];
       var cw = 0.62 * fs;   // Red Hat Mono advance ~0.6em
       order.slice().sort(function (a, b) { return b.anchor[1] - a.anchor[1]; }).forEach(function (b) {
         var roof = b.anchor[1] - lot * 0.25;
@@ -101,6 +104,9 @@
         var h;
         while (!foot && (h = hit()) && guard++ < 20) { y = h.y - h.h - fs * 0.5; moved = true; }
         placed.push({ x: x, y: y, w: w, h: hgt });
+        bb[1] = Math.min(bb[1], y - hgt); bb[3] = Math.max(bb[3], y + fs * 0.5);
+        bb[0] = Math.min(bb[0], x - w / 2); bb[2] = Math.max(bb[2], x + w / 2);
+        if (dry) return;
         var t = el("g", { "class": "lbl" }, lg);
         if (moved) el("line", { x1: x, y1: roof - 2, x2: x, y2: (y + fs * 0.35).toFixed(1), "class": "lead" }, t);
         var v = el("text", { "class": "lbl-v", x: x.toFixed(1), y: y.toFixed(1), "text-anchor": "middle", "font-size": (fs * 1.25).toFixed(1) }, t);
@@ -108,12 +114,11 @@
         var n = el("text", { "class": "lbl-n", x: x.toFixed(1), y: (y - fs * 1.45).toFixed(1), "text-anchor": "middle", "font-size": fs.toFixed(1) }, t);
         n.textContent = b.w.name;
         b.label = v; b.lblG = t;
-        bb[1] = Math.min(bb[1], y - hgt); bb[3] = Math.max(bb[3], y + fs * 0.5); bb[0] = Math.min(bb[0], x - w / 2); bb[2] = Math.max(bb[2], x + w / 2);
       });
     }
     var m = o.margin == null ? 8 : o.margin;
     var vb = [bb[0] - m, bb[1] - m, bb[2] - bb[0] + 2 * m, bb[3] - bb[1] + 2 * m];
-    if (o.setViewBox !== false) svg.setAttribute("viewBox", vb.map(function (n) { return n.toFixed(1); }).join(" "));
+    if (!dry && o.setViewBox !== false) svg.setAttribute("viewBox", vb.map(function (n) { return n.toFixed(1); }).join(" "));
     return { buildings: B, viewBox: vb, K: K, M: M, lot: lot };
   }
   root.Iso = { P: P, el: el, box: box, city: city, cost: cost, minutes: minutes, money: money, PAL: PAL, RATE: RATE, NS: NS };
