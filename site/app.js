@@ -71,22 +71,23 @@
   var outMin = document.getElementById("cityMin"), outCost = document.getElementById("cityCost"), outName = document.getElementById("cityName");
   var cur = 0, hero = null, busy = false, lastW = 0;
   var sky = document.querySelector(".sky");
-  function heroOpts(fs) {
-    var w = svg.clientWidth || innerWidth, narrow = w < 700, n = CITIES[cur].w.length;
+  function heroOpts(fs, w) {
+    var narrow = (w || innerWidth) < 700, n = CITIES[cur].w.length;
     return { cols: narrow ? Math.ceil(n / 2) : n, maxH: narrow ? 240 : 260, lot: 40, step: narrow ? 64 : 92, fs: fs || 13, margin: 6, plaza: false, setViewBox: false, footLabels: narrow };
   }
   function layoutHero() {
-    var data = CITIES[cur].w, r = svg.getBoundingClientRect();
+    var data = CITIES[cur].w, r = svg.getBoundingClientRect();   // read layout once, before any DOM writes
     var S = sky.getBoundingClientRect().bottom - r.top + 18, RH = Math.max(160, r.height - S);
-    var c, fs = 13, scale = 1;
-    for (var pass = 0; pass < 3; pass++) {
-      c = I.city(svg, data, heroOpts(fs));
-      var v = c.viewBox;
+    var fs = 13, scale = 1, o;
+    for (var pass = 0; pass < 4; pass++) {     // geometry-only passes to settle the label size
+      o = heroOpts(fs, r.width); o.dry = true;
+      var v = I.city(svg, data, o).viewBox;
       scale = Math.min(r.width * 0.94 / v[2], RH / v[3], 1.8);
       var nfs = Math.max(10, Math.min(26, 13.5 / scale));
       if (Math.abs(nfs - fs) < 0.4) break;
       fs = nfs;
     }
+    var c = I.city(svg, data, heroOpts(fs, r.width));
     var v2 = c.viewBox, W = r.width / scale, H = r.height / scale;
     var vb = [v2[0] + v2[2] / 2 - W / 2, v2[1] + v2[3] - H + 8 / scale, W, H];
     svg.setAttribute("viewBox", vb.map(function (n) { return n.toFixed(1); }).join(" "));
@@ -104,9 +105,13 @@
     if (!animate) { outMin.value = fmtMin(t.min); outCost.value = I.money(t.cost); build(hero, false); return; }
     var m = 0, cst = 0;
     outMin.value = "0"; outCost.value = "$0.00";
-    var anims = build(hero, true, function (br) { m += br.min; cst += br.cost; outMin.value = fmtMin(m); outCost.value = I.money(cst); });
     busy = true;
-    Promise.all(anims.map(function (a) { return a.finished; })).then(function () { outMin.value = fmtMin(t.min); outCost.value = I.money(t.cost); busy = false; }, function () { busy = false; });
+    svg.classList.add("pending");             // bricks hidden until the drop starts on the next frame
+    requestAnimationFrame(function () {
+      var anims = build(hero, true, function (br) { m += br.min; cst += br.cost; outMin.value = fmtMin(m); outCost.value = I.money(cst); });
+      svg.classList.remove("pending");
+      Promise.all(anims.map(function (a) { return a.finished; })).then(function () { outMin.value = fmtMin(t.min); outCost.value = I.money(t.cost); busy = false; }, function () { busy = false; });
+    });
   }
   function knockDown(next) {
     if (reduce || !hero) return next();
