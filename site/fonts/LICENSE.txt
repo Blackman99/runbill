@@ -1,4 +1,4 @@
-Unbounded (fonts/unbounded.woff2):
+Unbounded (fonts/unbounded-700.woff2, fonts/unbounded-800.woff2; static instances subset to Latin):
 Copyright 2022 The Unbounded Project Authors (https://github.com/googlefonts/unbounded)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
@@ -94,7 +94,7 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 
 -----
-Red Hat Text and Red Hat Mono (fonts/redhattext.woff2, fonts/redhatmono.woff2):
+Red Hat Text and Red Hat Mono (fonts/redhattext-400/700.woff2, fonts/redhatmono-400/700.woff2; static instances subset to Latin):
 Copyright 2024 The Red Hat Project Authors (https://github.com/RedHatOfficial/RedHatFont)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.

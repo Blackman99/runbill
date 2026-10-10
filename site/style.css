@@ -1,6 +1,9 @@
-@font-face{font-family:"Unbounded";src:url(fonts/unbounded.woff2) format("woff2");font-weight:200 900;font-display:swap}
-@font-face{font-family:"Red Hat Text";src:url(fonts/redhattext.woff2) format("woff2");font-weight:300 700;font-display:swap}
-@font-face{font-family:"Red Hat Mono";src:url(fonts/redhatmono.woff2) format("woff2");font-weight:300 700;font-display:swap}
+@font-face{font-family:"Unbounded";src:url(fonts/unbounded-700.woff2) format("woff2");font-weight:500 749;font-display:swap}
+@font-face{font-family:"Unbounded";src:url(fonts/unbounded-800.woff2) format("woff2");font-weight:750 900;font-display:swap}
+@font-face{font-family:"Red Hat Text";src:url(fonts/redhattext-400.woff2) format("woff2");font-weight:300 549;font-display:swap}
+@font-face{font-family:"Red Hat Text";src:url(fonts/redhattext-700.woff2) format("woff2");font-weight:550 800;font-display:swap}
+@font-face{font-family:"Red Hat Mono";src:url(fonts/redhatmono-400.woff2) format("woff2");font-weight:300 549;font-display:swap}
+@font-face{font-family:"Red Hat Mono";src:url(fonts/redhatmono-700.woff2) format("woff2");font-weight:550 800;font-display:swap}
 :root{
   --concrete:#c9ccd1;--plaza:#b9bdc3;--plaza-l:#a5aab1;--plaza-r:#8e939b;--ink:#16181d;--ink-2:#353a43;
   --linux:#f7f6f2;--linux-l:#dcdcd8;--linux-r:#bcbdbd;
