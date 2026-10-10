@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: bill
-        uses: Blackman99/runbill@v0.1.0
+        uses: Blackman99/runbill@v0.1.1
         with:
           days: 7
           fail-over: 20   # optional: fail if the week's estimate is over $20
