@@ -26,7 +26,8 @@ Exit codes: `0` ok, `1` GitHub API error, `2` usage error, `3` over budget.
 
 ```json
 {"repo": "o/r", "since": "2026-09-10", "private": true, "runs": 97, "truncated": false,
- "total": {"name": "total", "runs": 97, "jobs": 320, "raw_minutes": 1510.2, "billed_minutes": 2260,
-           "cost_usd": 42.86, "rerun_cost_usd": 5.4, "billed_minutes_by_runner": {"linux": 1270, "macos": 490}},
- "rerun_share": 0.126, "workflows": [...], "jobs": [...]}
+ "total": {"name": "total", "runs": 97, "jobs": 320, "raw_minutes": 1509.68, "billed_minutes": 1672,
+           "cost_usd": 42.466, "rerun_cost_usd": 5.4,
+           "billed_minutes_by_runner": {"linux": 479, "linux-8-core": 196, "macos": 490, "self-hosted": 17, "windows": 490}},
+ "rerun_share": 0.1272, "workflows": [...], "jobs": [...]}
 ```

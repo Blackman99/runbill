@@ -13,7 +13,7 @@ runbill OWNER/REPO --fail-over 50  # exit 3 if the estimate is over $50
 
 ## Reading the report
 
-- **billed min**: per job, `ceil(duration in minutes) × size multiplier`, summed. Skipped jobs and zero-length jobs are ignored.
+- **billed min**: per job, `ceil(duration in minutes)`, summed (as GitHub bills; larger runners are priced by their own per-minute rate, not by more minutes). Skipped jobs and zero-length jobs are ignored.
 - **raw min**: actual wall-clock job time, unrounded. A large gap between raw and billed means many short jobs (a wide matrix of 20-second jobs costs a minute each).
 - **cost**: billed minutes × the tariff for that runner (see [Configuration](config.md)).
 - **re-runs**: cost from jobs with `run_attempt > 1`, as a share of total.

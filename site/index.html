@@ -68,10 +68,11 @@
       <tr><td>1A</td><td>Linux arm64</td><td>0.005</td><td>$0.05</td></tr>
       <tr><td>2</td><td>Windows 2-core</td><td>0.010</td><td>$0.10</td></tr>
       <tr class="hot"><td>3</td><td>macOS</td><td>0.062</td><td>$0.62</td></tr>
-      <tr><td>×n</td><td>larger runners (<code>…-8-cores</code>)</td><td>× cores/2</td><td>$0.24 (8-core Linux)</td></tr>
+      <tr><td>L</td><td>Linux 8-core (larger runner)</td><td>0.022</td><td>$0.22</td></tr>
+      <tr><td>S</td><td>Linux 1-core (<code>ubuntu-slim</code>)</td><td>0.002</td><td>$0.02</td></tr>
     </tbody>
   </table>
-  <p class="fine">List prices; override any of them with <code>--rate macos=0.08</code>. Every started minute is charged, per job.</p>
+  <p class="fine"><a href="https://docs.github.com/en/billing/reference/actions-runner-pricing">GitHub list prices</a>, every larger-runner size included; override any of them with <code>--rate macos=0.08</code>. Every started minute is charged, per job.</p>
 </section>
 
 <section class="howto" aria-labelledby="how">
@@ -79,7 +80,7 @@
   <ol>
     <li><b>Pick up.</b> List completed runs in the window from <code>/actions/runs</code> (works on public and private repos, any plan).</li>
     <li><b>Every leg.</b> Pull all jobs of each run, including earlier attempts, so re-runs show up as their own cost.</li>
-    <li><b>Tariff.</b> Read each job's runner labels: Linux, Windows, macOS, arm, self-hosted, and size from <code>N-cores</code>.</li>
+    <li><b>Tariff.</b> Read each job's runner labels: Linux, Windows, macOS, arm, self-hosted, and size (<code>N-cores</code>, macOS <code>large</code>/<code>xlarge</code>, <code>ubuntu-slim</code>) at its own published rate.</li>
     <li><b>Round up.</b> Each job is billed in whole minutes. A 40-second lint job is a 1-minute fare.</li>
     <li><b>Receipt.</b> Rank workflows and jobs by cost, show the re-run share, optionally fail CI over a budget.</li>
   </ol>
@@ -87,7 +88,7 @@
 
 <section class="receipt-wrap" aria-labelledby="rcpt">
   <h2 id="rcpt">The receipt</h2>
-  <div class="receipt" id="receipt" tabindex="0"><span class="ln one">$ runbill your-org/app --days 30</span><span class="ln gap"></span><span class="ln"><b>TOTAL</b><em>2,260 min</em><em>$42.86</em></span><span class="ln one">raw 1,510 min · re-runs 12.6% of cost</span><span class="ln gap"></span><span class="ln hd"><b>BY WORKFLOW</b><em>min</em><em>cost</em></span><span class="ln"><b>CI · 60 runs</b><em>1,400</em><em>$37.80</em></span><span class="ln"><b>E2E nightly · 9</b><em>784</em><em>$4.70</em></span><span class="ln"><b>Docs · 25</b><em>50</em><em>$0.30</em></span><span class="ln"><b>Release · 3</b><em>26</em><em>$0.05</em></span><span class="ln gap"></span><span class="ln hd"><b>TOP JOBS</b><em>min</em><em>cost</em></span><span class="ln"><b>CI › test (macos)</b><em>490</em><em>$30.38</em></span><span class="ln"><b>CI › test (windows)</b><em>490</em><em>$4.90</em></span><span class="ln"><b>E2E nightly › playwright</b><em>784</em><em>$4.70</em></span><span class="ln"><b>CI › test (ubuntu)</b><em>350</em><em>$2.10</em></span><span class="ln gap"></span><span class="ln one">THANK YOU · PLEASE RIDE AGAIN</span></div>
+  <div class="receipt" id="receipt" tabindex="0"><span class="ln one">$ runbill your-org/app --days 30</span><span class="ln gap"></span><span class="ln"><b>TOTAL</b><em>1,672 min</em><em>$42.47</em></span><span class="ln one">raw 1,510 min · re-runs 12.7% of cost</span><span class="ln gap"></span><span class="ln hd"><b>BY WORKFLOW</b><em>min</em><em>cost</em></span><span class="ln"><b>CI · 60 runs</b><em>1,400</em><em>$37.80</em></span><span class="ln"><b>E2E nightly · 9</b><em>196</em><em>$4.31</em></span><span class="ln"><b>Docs · 25</b><em>50</em><em>$0.30</em></span><span class="ln"><b>Release · 3</b><em>26</em><em>$0.05</em></span><span class="ln gap"></span><span class="ln hd"><b>TOP JOBS</b><em>min</em><em>cost</em></span><span class="ln"><b>CI › test (macos)</b><em>490</em><em>$30.38</em></span><span class="ln"><b>CI › test (windows)</b><em>490</em><em>$4.90</em></span><span class="ln"><b>E2E nightly › playwright</b><em>196</em><em>$4.31</em></span><span class="ln"><b>CI › test (ubuntu)</b><em>350</em><em>$2.10</em></span><span class="ln gap"></span><span class="ln one">THANK YOU · PLEASE RIDE AGAIN</span></div>
 </section>
 
 <section class="ticket" aria-labelledby="inst">

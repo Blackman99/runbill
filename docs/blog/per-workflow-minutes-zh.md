@@ -140,7 +140,7 @@ jobs:
 
 ## 它不是什么
 
-runbill 给的是**按牌价的估算**，不是对账。它不知道你套餐里的免费分钟、折扣或合同价。大规格 runner 的单价是根据标签里的核数推算的（例如 Linux 8 核按 4 × $0.006 = $0.024/分钟估算，而 GitHub 标价是 $0.022），所以大规格 runner 的合计会略偏高。要权威的按 workflow 数字，还是看账单页的用量报告；runbill 的用途是在终端或定时任务里找出分钟**花在哪儿**，细到 job 和重跑。
+runbill 给的是**按牌价的估算**，不是对账。它不知道你套餐里的免费分钟、折扣或合同价。大规格 runner 按 GitHub [公布的分规格单价](https://docs.github.com/en/billing/reference/actions-runner-pricing)计价（Linux 8 核 $0.022/分钟，macOS `xlarge` $0.102，单核 `ubuntu-slim` $0.002），但大规格 runner 的标签由组织管理员自己命名，只有标签里带核数（`…-8-cores`）或 macOS 的 `large`/`xlarge` 后缀时，runbill 才能识别规格。要权威的按 workflow 数字，还是看账单页的用量报告；runbill 的用途是在终端或定时任务里找出分钟**花在哪儿**，细到 job 和重跑。
 
 [路线图](https://github.com/Blackman99/runbill/blob/main/ROADMAP.md)上的下一步：组织级汇总（`runbill org ORG`）、按分支和触发事件拆分，以及周环比 `--compare`。
 

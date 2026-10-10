@@ -21,8 +21,9 @@
     svg.setAttribute("aria-label", "$" + v.toFixed(2));
   }
   const RATE = {linux: .006, windows: .010, macos: .062};
+  const rate = (leg) => leg[3] || RATE[leg[1]];  // optional 4th field: larger-runner $/min
   const RIDES = [
-    [["Docs", "linux", 50], ["CI › lint", "linux", 70], ["CI › test (ubuntu)", "linux", 350], ["CI › test (windows)", "windows", 490], ["E2E nightly", "linux", 784], ["CI › test (macos)", "macos", 490]],
+    [["Docs", "linux", 50], ["CI › lint", "linux", 70], ["CI › test (ubuntu)", "linux", 350], ["CI › test (windows)", "windows", 490], ["E2E nightly (8-core)", "linux", 196, .022], ["CI › test (macos)", "macos", 490]],
     [["Lint", "linux", 120], ["Unit", "linux", 900], ["Build (win)", "windows", 300], ["iOS build", "macos", 640], ["Deploy", "linux", 60]],
     [["Docs", "linux", 40], ["Test matrix", "linux", 1800], ["Nightly fuzz", "linux", 2400], ["Release (mac)", "macos", 45]],
   ];
@@ -32,7 +33,7 @@
   let ride = 0, timer = null;
   function light(sku) { tariffs.forEach(t => t.classList.toggle("lit", t.dataset.sku === sku)); }
   function finalState(r) {
-    let c = 0, m = 0; r.forEach(([, s, n]) => { c += n * RATE[s]; m += n; });
+    let c = 0, m = 0; r.forEach((l) => { c += l[2] * rate(l); m += l[2]; });
     show(c); minsEl.value = m.toLocaleString("en"); wfEl.value = r[r.length - 1][0]; light(r[r.length - 1][1]);
     meter.classList.add("hired"); flag.textContent = "HIRED";
   }
@@ -48,8 +49,8 @@
           if (leg >= r.length) { clearInterval(timer); return; }
           left = r[leg][2]; wfEl.value = r[leg][0]; light(r[leg][1]); leg++;
         }
-        const step = Math.min(left, 10), sku = r[leg - 1][1];
-        left -= step; mins += step; cost += step * RATE[sku];
+        const step = Math.min(left, 10);
+        left -= step; mins += step; cost += step * rate(r[leg - 1]);
         show(cost); minsEl.value = mins.toLocaleString("en");
       }, 40);
     }, 700);

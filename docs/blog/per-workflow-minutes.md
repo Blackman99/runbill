@@ -175,9 +175,11 @@ jobs:
 ## What it isn't
 
 runbill is a **list-price estimate**, not invoice reconciliation. It doesn't know your included minutes, discounts or
-contract prices. Larger-runner rates are approximated from the core count in the runner label (for example 8-core
-Linux is estimated at 4 × $0.006 = $0.024/min, while GitHub lists $0.022), so treat large-runner totals as slightly
-high. For the authoritative per-workflow numbers, the billing usage report is still the source; runbill is for finding
+contract prices. Larger runners are priced at GitHub's
+[published per-size rates](https://docs.github.com/en/billing/reference/actions-runner-pricing) (8-core Linux
+$0.022/min, macOS `xlarge` $0.102, 1-core `ubuntu-slim` $0.002), but larger-runner labels are chosen by your admins,
+so runbill can only size them when the label carries the core count (`…-8-cores`) or the macOS `large`/`xlarge`
+suffix. For the authoritative per-workflow numbers, the billing usage report is still the source; runbill is for finding
 *where* the minutes go, from a terminal or a scheduled job, down to the job and the re-run.
 
 Next on the [roadmap](https://github.com/Blackman99/runbill/blob/main/ROADMAP.md): an org-wide rollup
