@@ -2,8 +2,8 @@ name: "runbill Actions minutes meter"
 description: "Per-workflow and per-job GitHub Actions billed minutes and cost in your job summary, with an optional budget gate."
 author: "Blackman99"
 branding:
-  icon: "clock"
-  color: "yellow"
+  icon: "box"
+  color: "blue"
 inputs:
   repo:
     description: "OWNER/REPO to meter (default: this repository)"

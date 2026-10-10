@@ -1,4 +1,0 @@
-:root{--md-primary-fg-color:#1d1a16;--md-primary-bg-color:#f2c230;--md-accent-fg-color:#e8341c;--md-text-font:"Barlow Condensed","Arial Narrow",sans-serif}
-.md-header{border-bottom:6px solid #f2c230}
-.md-typeset h1,.md-typeset h2{font-weight:800;text-transform:uppercase;letter-spacing:.01em}
-.md-typeset table:not([class]) th{background:#f2c230;color:#1d1a16}
