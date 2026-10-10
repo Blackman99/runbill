@@ -28,6 +28,7 @@
 <link rel="preload" href="fonts/unbounded-800.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/redhattext-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
+<script>document.documentElement.className="js"</script>
 </head>
 <body>
 <header class="bar">
@@ -39,12 +40,14 @@
 
 <main>
 <section class="hero" aria-labelledby="t">
-  <div class="stage"><svg id="city" class="city" role="img" aria-labelledby="cityCap"></svg></div>
-  <div class="sky">
-    <p class="kicker">GitHub Actions minutes &amp; cost, per workflow and per job</p>
-    <h1 id="t">Who ran up the Actions&nbsp;bill?</h1>
-    <p class="lede">GitHub shows you one total. <b>runbill</b> builds every workflow as a building and lays each job's billed minutes
-      as bricks, priced by runner. A macOS minute is ten Linux minutes tall.</p>
+  <div class="stage">
+    <svg id="city" class="city" role="img" aria-labelledby="cityCap"></svg>
+    <div class="board" id="board">
+      <div class="panel">
+        <h1 id="t">Who ran up the<br>Actions&nbsp;bill?</h1>
+        <p class="bb-sub"><span id="bbName">iOS</span> <output id="bbCost">$18.60</output> <span class="of">of</span> <output id="bbTotal">$47.37</output></p>
+      </div>
+    </div>
   </div>
   <div class="hud">
     <p id="cityCap" class="cap"><b id="cityName">a monorepo</b>, 30 days: <output id="cityMin">0</output> billed min,
@@ -52,6 +55,12 @@
     <p class="key"><span><i class="sw linux"></i>Linux <code>$0.006</code></span><span><i class="sw windows"></i>Windows <code>$0.010</code></span><span><i class="sw macos"></i>macOS <code>$0.062</code></span><span class="per">per min</span></p>
     <button id="again" class="brickbtn" type="button">Pour another city <span aria-hidden="true">↻</span></button>
   </div>
+</section>
+
+<section class="about" aria-label="What runbill does">
+  <p class="kicker">GitHub Actions minutes &amp; cost, per workflow and per job</p>
+  <p class="lede">GitHub shows you one total. <b>runbill</b> builds every workflow as a building and lays each job's billed minutes
+    as bricks, priced by runner. A macOS minute is ten Linux minutes tall, so the tallest building is the workflow running up your bill.</p>
 </section>
 
 <section class="survey" aria-labelledby="sv">

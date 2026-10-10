@@ -37,8 +37,14 @@ Isometric 3D blocks drawn as SVG polygons from a tiny projection helper (`iso.js
 bottom-to-top. No paper, no grain, no skeuomorphic objects, no outlines.
 
 ## Layout
-1. **Full-bleed city hero.** The wide Unbounded headline sits in the "sky" across the full width; the city
-   plaza fills the lower part of the viewport edge to edge. Not a centred object, not left-copy/right-card.
+1. **The city is the hero (v2.1, 2026-10-10).** No headline block: the full-bleed city fills the first screen and
+   the `<h1>` is a **billboard on the roof of the tallest building**, an ink panel standing in the isometric plane
+   (CSS `skewY(-26.565deg)`, two steel posts down to the roof). Under the title the sign answers its own question:
+   "iOS $18.60 of $47.37". The sign rides the roof up as the tallest building is stacked, comes down when the city is
+   knocked over, and moves to the new tallest building after "Pour another city". It is real DOM text (the page's only
+   h1); without JS it sits centred at the top of the stage. The HUD strip under the scene keeps the dataset, total,
+   brick key and the button; the kicker and lede moved to a short intro block below the hero. (v2.0 had a
+   top-left heavy-sans question headline, which read structurally like certfan and linelore.)
 2. **Survey (scroll tour).** The city stays pinned while the camera pans building to building; beside the scene
    a legend block per building (swatch cube + workflow, jobs, minutes, $) replaces tables and cards.
 3. **Brick conversion chart.** One isometric drawing: the same 50 billed minutes as a Linux, Windows and macOS
@@ -61,8 +67,8 @@ Three flat faces each, transparent background, no rounded app-icon tile, no outl
 favicon, the 512 px PNG, the docs logo and the mark in the OG / social preview.
 
 ## OG image and social preview
-Concrete field, an isometric skyline across the bottom built from the same helper, the Unbounded `runbill`
-wordmark with the logo, and the line "Who ran up the Actions bill?". 1200×630 (`og-image.png`) and 1280×640
+Concrete field, the same skyline built from the same helper, with "Who ran up the Actions bill?" on the billboard
+on the tallest roof (as on the page), plus the logo and `runbill` wordmark as a small corner mark. 1200×630 (`og-image.png`) and 1280×640
 (`social-preview.png`, `og-social-preview.png`).
 
 ## Marketplace branding
@@ -74,7 +80,7 @@ Playbook (2026-10-09):
 - gradient text: **no**, solid ink and solid cobalt
 - glow / glowing strokes: **no**
 - glassmorphism: **no**, no blur, no translucency
-- left-copy/right-animated-card hero: **no**, full-width headline over a full-bleed scene
+- left-copy/right-animated-card hero: **no**, the scene is the hero and the headline is a sign inside it
 - three-column feature cards: **no**, legend blocks in a scroll tour, a single conversion drawing, a storey list
 - generic SaaS / dev-tool template: **no**, the page is the city
 - Inter + monospace default pair: **no**, Unbounded + Red Hat Text + Red Hat Mono
@@ -96,6 +102,7 @@ Against the registry, axis by axis:
 - fonts: Unbounded / Red Hat Text / Red Hat Mono appear in no other project.
 - texture: the only 3D project (three-face flat shading); others are paper, pixels, thin vector lines, flat type.
 - rendering: isometric projection; others are skeuomorphic print, pixel art, generative dataviz, kinetic type.
-- layout: full-bleed scene with a camera pan; others are report page, game HUD, 12-col data plate, Swiss grid.
+- layout: full-bleed scene, headline as an in-scene rooftop billboard, camera pan; others are report page, game HUD,
+  12-col data plate, Swiss grid; none of the others puts its title inside its illustration.
 - motion: gravity (drop, stack, bounce); others are typing/stamping, `steps()` frames, line tracing, letter
   splitting.

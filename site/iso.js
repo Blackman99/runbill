@@ -93,6 +93,7 @@
       var lg = dry ? null : el("g", { "class": "labels" }, scene), placed = [];
       var cw = 0.62 * fs;   // Red Hat Mono advance ~0.6em
       order.slice().sort(function (a, b) { return b.anchor[1] - a.anchor[1]; }).forEach(function (b) {
+        if (b.i === o.skipLabel) return;   // this building carries the billboard instead
         var roof = b.anchor[1] - lot * 0.25;
         var w = Math.max(b.w.name.length * cw, 7 * cw * 1.25) + fs * 0.8, hgt = fs * 2.9;
         var y = roof - fs * 1.1, x = b.anchor[0], moved = false, guard = 0;

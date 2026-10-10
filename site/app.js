@@ -45,14 +45,17 @@
     if (done) a.onfinish = done;
     return a;
   }
-  function build(c, animate, onTick) {
+  function build(c, animate, onTick, onLift) {
     var anims = [];
     c.buildings.forEach(function (b, bi) {
       var n = b.bricks.length, per = n ? Math.min(85, 1700 / n) : 0, start = 150 + bi * 110;
       var run = 0;
       if (b.label) b.label.textContent = I.money(animate ? 0 : b.cost);
-      var lift = function (z) { if (b.lblG) b.lblG.style.transform = "translateY(" + (b.top - z).toFixed(1) + "px)"; };
-      if (!animate) return;
+      var lift = function (z) {
+        if (b.lblG) b.lblG.style.transform = "translateY(" + (b.top - z).toFixed(1) + "px)";
+        if (onLift) onLift(b, z, run);
+      };
+      if (!animate) { if (onLift) onLift(b, b.top, b.cost); return; }
       lift(2);
       b.bricks.forEach(function (br, k) {
         anims.push(drop(br, start + k * per, 170 + br.z * 0.25, function () {
@@ -66,33 +69,55 @@
     return anims;
   }
 
-  /* hero city */
-  var svg = document.getElementById("city"), fig = svg.parentNode;
+  /* hero city: the scene is the hero; the headline is a billboard on the roof of the tallest building */
+  var svg = document.getElementById("city"), stage = svg.parentNode;
   var outMin = document.getElementById("cityMin"), outCost = document.getElementById("cityCost"), outName = document.getElementById("cityName");
-  var cur = 0, hero = null, busy = false, lastW = 0;
-  var sky = document.querySelector(".sky");
-  function heroOpts(fs, w) {
+  var board = document.getElementById("board"), panel = board.querySelector(".panel");
+  var bbName = document.getElementById("bbName"), bbCost = document.getElementById("bbCost"), bbTotal = document.getElementById("bbTotal");
+  var cur = 0, hero = null, busy = false, lastW = 0, place = null;
+  var SLOPE = 0.5;                       // skewY(-26.565deg): the sign stands in the iso plane, rising to the right
+  function heroOpts(fs, w, skip) {
     var narrow = (w || innerWidth) < 700, n = CITIES[cur].w.length;
-    return { cols: narrow ? Math.ceil(n / 2) : n, maxH: narrow ? 240 : 260, lot: 40, step: narrow ? 64 : 92, fs: fs || 13, margin: 6, plaza: false, setViewBox: false, footLabels: narrow };
+    return { cols: narrow ? Math.ceil(n / 2) : n, maxH: narrow ? 240 : 260, lot: 40, step: narrow ? 64 : 92, fs: fs || 13, margin: 6,
+      plaza: false, setViewBox: false, footLabels: narrow, skipLabel: skip };
+  }
+  function tallest(data) {
+    var t = 0; data.forEach(function (w, i) { if (I.cost(w) > I.cost(data[t])) t = i; }); return t;
   }
   function layoutHero() {
-    var data = CITIES[cur].w, r = svg.getBoundingClientRect();   // read layout once, before any DOM writes
-    var S = sky.getBoundingClientRect().bottom - r.top + 18, RH = Math.max(160, r.height - S);
-    var fs = 13, scale = 1, o;
-    for (var pass = 0; pass < 4; pass++) {     // geometry-only passes to settle the label size
-      o = heroOpts(fs, r.width); o.dry = true;
-      var v = I.city(svg, data, o).viewBox;
-      scale = Math.min(r.width * 0.94 / v[2], RH / v[3], 1.8);
+    var data = CITIES[cur].w, ti = tallest(data);
+    bbName.textContent = data[ti].name;
+    var r = stage.getBoundingClientRect(), pw = panel.offsetWidth, ph = panel.offsetHeight;   // layout reads first
+    var narrow = r.width < 700, gap = narrow ? 10 : 16;
+    var post = SLOPE * pw / 2 + gap;      // posts long enough that the low (left) end of the sign clears the roof
+    var E = post + ph + SLOPE * pw / 2 + 10;   // sign height above the roof point, skew included
+    var fs = 13, scale = 1, o, d;
+    for (var pass = 0; pass < 4; pass++) {     // geometry-only passes settle scale and label size
+      o = heroOpts(fs, r.width, ti); o.dry = true;
+      d = I.city(svg, data, o);
+      var v = d.viewBox, R = d.buildings[ti].anchor, bottom = v[1] + v[3];
+      scale = Math.min(r.width * 0.94 / v[2], (r.height - 14) / v[3], (r.height - 14 - E) / (bottom - R[1]), 1.8);
       var nfs = Math.max(10, Math.min(26, 13.5 / scale));
       if (Math.abs(nfs - fs) < 0.4) break;
       fs = nfs;
     }
-    var c = I.city(svg, data, heroOpts(fs, r.width));
+    var c = I.city(svg, data, heroOpts(fs, r.width, ti));
     var v2 = c.viewBox, W = r.width / scale, H = r.height / scale;
     var vb = [v2[0] + v2[2] / 2 - W / 2, v2[1] + v2[3] - H + 8 / scale, W, H];
     svg.setAttribute("viewBox", vb.map(function (n) { return n.toFixed(1); }).join(" "));
+    var tb = c.buildings[ti], Rx = (tb.anchor[0] - vb[0]) * scale, Ry = (tb.anchor[1] - vb[1]) * scale;
+    var cx = Math.max(pw / 2 + 10, Math.min(r.width - pw / 2 - 10, Rx)), po = Rx - cx;   // keep the sign on screen
+    post = Math.max(gap, post + SLOPE * po);
+    board.style.setProperty("--post", post.toFixed(1) + "px");
+    board.style.setProperty("--po", po.toFixed(1) + "px");
+    place = { x: cx - pw / 2, y: Ry + SLOPE * po - post - ph, b: tb, s: scale };
     lastW = r.width;
     return c;
+  }
+  function moveBoard(z) {               // the sign rides the roof while its building is being stacked
+    if (!place) return;
+    var dy = (place.b.top - z) * place.s;
+    board.style.transform = "translate(" + place.x.toFixed(1) + "px," + (place.y + dy).toFixed(1) + "px) skewY(-26.565deg)";
   }
   function totals(data) {
     return { min: data.reduce(function (s, w) { return s + I.minutes(w); }, 0), cost: data.reduce(function (s, w) { return s + I.cost(w); }, 0) };
@@ -102,15 +127,23 @@
     outName.textContent = CITIES[cur].name;
     hero = layoutHero();
     svg.setAttribute("aria-label", CITIES[cur].name + ": " + data.map(function (w) { return w.name + " " + I.money(I.cost(w)); }).join(", "));
-    if (!animate) { outMin.value = fmtMin(t.min); outCost.value = I.money(t.cost); build(hero, false); return; }
+    var onLift = function (b, z, run) { if (b === place.b) { moveBoard(z); bbCost.value = I.money(run); } };
+    board.classList.remove("down");
+    if (!animate) {
+      outMin.value = fmtMin(t.min); outCost.value = I.money(t.cost); bbTotal.value = I.money(t.cost);
+      build(hero, false, null, onLift); board.classList.add("placed"); return;
+    }
     var m = 0, cst = 0;
-    outMin.value = "0"; outCost.value = "$0.00";
+    outMin.value = "0"; outCost.value = "$0.00"; bbTotal.value = "$0.00"; bbCost.value = "$0.00";
     busy = true;
+    moveBoard(2); board.classList.add("placed");
     svg.classList.add("pending");             // bricks hidden until the drop starts on the next frame
     requestAnimationFrame(function () {
-      var anims = build(hero, true, function (br) { m += br.min; cst += br.cost; outMin.value = fmtMin(m); outCost.value = I.money(cst); });
+      var anims = build(hero, true, function (br) { m += br.min; cst += br.cost; outMin.value = fmtMin(m); outCost.value = I.money(cst); bbTotal.value = I.money(cst); }, onLift);
       svg.classList.remove("pending");
-      Promise.all(anims.map(function (a) { return a.finished; })).then(function () { outMin.value = fmtMin(t.min); outCost.value = I.money(t.cost); busy = false; }, function () { busy = false; });
+      Promise.all(anims.map(function (a) { return a.finished; })).then(function () {
+        outMin.value = fmtMin(t.min); outCost.value = I.money(t.cost); bbTotal.value = I.money(t.cost); bbCost.value = I.money(place.b.cost); busy = false;
+      }, function () { busy = false; });
     });
   }
   function knockDown(next) {
@@ -123,6 +156,8 @@
       });
     });
     svg.querySelectorAll(".lbl").forEach(function (l) { anims.push(l.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" })); });
+    board.classList.add("down");            // the sign comes down with its building
+    moveBoard(2);
     Promise.all(anims.map(function (a) { return a.finished; })).then(next, next);
   }
   document.getElementById("again").addEventListener("click", function () {
@@ -135,7 +170,7 @@
   var rt;
   addEventListener("resize", function () {
     clearTimeout(rt);
-    rt = setTimeout(function () { if (Math.abs(svg.getBoundingClientRect().width - lastW) > 30) { hero && hero.buildings.forEach(function (b) { b.bricks.forEach(function (br) { br.g.getAnimations().forEach(function (a) { a.cancel(); }); }); }); busy = false; showHero(false); } if (tourCity) tourLayout(); }, 200);
+    rt = setTimeout(function () { if (Math.abs(stage.getBoundingClientRect().width - lastW) > 30) { hero && hero.buildings.forEach(function (b) { b.bricks.forEach(function (br) { br.g.getAnimations().forEach(function (a) { a.cancel(); }); }); }); busy = false; showHero(false); } if (tourCity) tourLayout(); }, 200);
   });
 
   /* survey: pinned scene, camera pans building to building */
