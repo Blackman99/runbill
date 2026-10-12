@@ -97,3 +97,68 @@ def test_larger_runner_cost_is_minutes_times_size_rate():
     assert rep.total.billed_minutes == 10
     assert round(rep.total.cost, 4) == 0.22
     assert rep.total.by_sku == {"linux-8-core": 10}
+
+
+def test_org_rollup_ranks_by_cost_and_totals():
+    from runbill.core import build_org_report
+
+    cheap_runs = [{"id": 1, "name": "CI"}]
+    cheap_jobs = {1: [job(["ubuntu-latest"], 60)]}
+    dear_runs = [{"id": 2, "name": "CI"}, {"id": 3, "name": "CI"}]
+    dear_jobs = {
+        2: [job(["macos-latest"], 60, name="mac")],
+        3: [job(["macos-latest"], 120, name="mac")],
+    }
+    a = build_report("acme/cheap", "2026-10-01", cheap_runs, cheap_jobs, private=True)
+    b = build_report("acme/dear", "2026-10-01", dear_runs, dear_jobs, private=True)
+    org = build_org_report("acme", "2026-10-01", [a, b], repo_scanned=5)
+    assert org.repo_scanned == 5
+    assert org.repo_active == 2
+    assert org.repos[0].key == "acme/dear"
+    assert org.repos[1].key == "acme/cheap"
+    assert org.total.runs == 3
+    assert org.total.billed_minutes == a.total.billed_minutes + b.total.billed_minutes
+    assert abs(org.total.cost - (a.total.cost + b.total.cost)) < 1e-9
+    assert org.private is True
+    d = org.as_dict()
+    assert d["org"] == "acme"
+    assert d["repos"][0]["name"] == "acme/dear"
+    assert "TOTAL" in render.org_text(org)
+    assert "| acme/dear |" in render.org_markdown(org)
+    assert render.org_csv(org).startswith("level,name")
+    assert json.loads(render.as_json(org))["repo_active"] == 2
+
+
+def test_org_all_public_note():
+    from runbill.core import build_org_report
+
+    r = build_report("o/r", "x", [], {}, private=False)
+    org = build_org_report("o", "x", [r], repo_scanned=1)
+    assert org.private is False
+    assert "free" in render.org_text(org).lower()
+
+
+def test_org_mixed_public_private_note():
+    from runbill.core import build_org_report
+
+    pub = build_report("o/pub", "x", [], {}, private=False)
+    priv = build_report("o/priv", "x", [], {}, private=True)
+    org = build_org_report("o", "x", [pub, priv], repo_scanned=2)
+    assert org.private is True
+    assert org.public_repos == 1 and org.private_repos == 1
+    assert "public" in render.org_text(org).lower()
+
+
+def test_org_cli_help(capsys):
+    try:
+        main(["org", "--help"])
+    except SystemExit as e:
+        assert e.code == 0
+    out = capsys.readouterr().out
+    assert "ORG" in out or "org" in out
+    assert "--max-runs" in out
+    assert "--include-archived" in out
+
+
+def test_org_cli_rejects_owner_repo():
+    assert main(["org", "acme/app"]) == 2

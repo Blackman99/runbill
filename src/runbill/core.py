@@ -154,6 +154,81 @@ class Report:
         }
 
 
+
+@dataclass
+class OrgReport:
+    """Roll-up of per-repo Report totals for an org or user."""
+    org: str
+    since: str
+    private: Optional[bool]
+    total: Line
+    repos: List[Line]  # ranked by cost descending; key is OWNER/REPO
+    run_count: int
+    repo_scanned: int
+    repo_active: int
+    truncated: bool = False
+    public_repos: int = 0
+    private_repos: int = 0
+
+    def as_dict(self) -> dict:
+        t = self.total
+        return {
+            "org": self.org, "since": self.since, "private": self.private,
+            "runs": self.run_count, "truncated": self.truncated,
+            "repo_scanned": self.repo_scanned, "repo_active": self.repo_active,
+            "public_repos": self.public_repos, "private_repos": self.private_repos,
+            "total": t.as_dict(),
+            "rerun_share": round(t.rerun_cost / t.cost, 4) if t.cost else 0.0,
+            "repos": [r.as_dict() for r in self.repos],
+        }
+
+
+def build_org_report(org: str, since: str, reports: Iterable[Report],
+                     repo_scanned: int, truncated: bool = False) -> OrgReport:
+    """Aggregate per-repo reports into an org rollup ranked by cost."""
+    reports = list(reports)
+    total = Line("total")
+    lines: List[Line] = []
+    public_n = private_n = 0
+    privacies: List[Optional[bool]] = []
+    for rep in reports:
+        privacies.append(rep.private)
+        if rep.private is True:
+            private_n += 1
+        elif rep.private is False:
+            public_n += 1
+        src = rep.total
+        line = Line(rep.repo)
+        line.runs = src.runs
+        line.jobs = src.jobs
+        line.seconds = src.seconds
+        line.billed_minutes = src.billed_minutes
+        line.cost = src.cost
+        line.rerun_cost = src.rerun_cost
+        line.by_sku = dict(src.by_sku)
+        lines.append(line)
+        total.runs += src.runs
+        total.jobs += src.jobs
+        total.seconds += src.seconds
+        total.billed_minutes += src.billed_minutes
+        total.cost += src.cost
+        total.rerun_cost += src.rerun_cost
+        for sku, mins in src.by_sku.items():
+            total.by_sku[sku] = total.by_sku.get(sku, 0.0) + mins
+    if privacies and all(p is False for p in privacies):
+        private: Optional[bool] = False
+    elif any(p is True for p in privacies):
+        private = True
+    else:
+        private = None
+    any_trunc = truncated or any(r.truncated for r in reports)
+    return OrgReport(
+        org, since, private, total,
+        sorted(lines, key=lambda x: (-x.cost, -x.billed_minutes, x.key)),
+        total.runs, repo_scanned, len(lines), any_trunc,
+        public_repos=public_n, private_repos=private_n,
+    )
+
 def build_report(repo: str, since: str, runs: Iterable[dict], jobs_by_run: Dict[int, List[dict]],
                  rates: Optional[Dict[str, float]] = None, private: Optional[bool] = None,
                  truncated: bool = False) -> Report:

@@ -5,7 +5,7 @@ import csv
 import io
 import json
 
-from .core import Report
+from .core import OrgReport, Report
 
 
 def _money(x: float) -> str:
@@ -16,6 +16,16 @@ def _note(r: Report) -> str:
     if r.private is False:
         return ("Public repo: standard GitHub-hosted runners are free here. Figures show what these "
                 "minutes would cost at list price on a private repo.")
+    return "List-price estimate. Jobs rounded up to whole minutes; runner type and size from labels."
+
+
+def _org_note(r: OrgReport) -> str:
+    if r.private is False:
+        return ("All listed repos are public: standard GitHub-hosted runners are free there. "
+                "Figures show what these minutes would cost at list price on a private repo.")
+    if r.public_repos and r.private_repos:
+        return (f"{r.public_repos} public / {r.private_repos} private repos with activity. "
+                "Standard runners are free on public repos; figures are list-price estimates.")
     return "List-price estimate. Jobs rounded up to whole minutes; runner type and size from labels."
 
 
@@ -41,6 +51,26 @@ def text(r: Report, top: int = 10) -> str:
     return "\n".join(out)
 
 
+def org_text(r: OrgReport, top: int = 10) -> str:
+    t = r.total
+    share = (t.rerun_cost / t.cost * 100) if t.cost else 0.0
+    out = [f"runbill · org {r.org} · runs since {r.since} "
+           f"({r.repo_active}/{r.repo_scanned} repos, {r.run_count} runs, {t.jobs} jobs)", ""]
+    out.append(f"  TOTAL      {t.billed_minutes:>9,.0f} billed min   {_money(t.cost):>10}   "
+               f"(raw {t.seconds / 60:,.0f} min, re-runs {share:.1f}%)")
+    out.append("")
+    out.append("  BY REPO" + " " * 34 + "runs    billed min        cost   share")
+    for repo in r.repos[:top]:
+        pct = (repo.cost / t.cost * 100) if t.cost else 0.0
+        out.append(f"  {repo.key[:40]:<41} {repo.runs:>4}  {repo.billed_minutes:>12,.0f}  "
+                   f"{_money(repo.cost):>10}  {pct:>5.1f}%")
+    out.append("")
+    if r.truncated:
+        out.append("  ! stopped at --max-runs on one or more repos; totals cover only the newest runs.")
+    out.append("  " + _org_note(r))
+    return "\n".join(out)
+
+
 def markdown(r: Report, top: int = 10) -> str:
     t = r.total
     share = (t.rerun_cost / t.cost * 100) if t.cost else 0.0
@@ -60,7 +90,25 @@ def markdown(r: Report, top: int = 10) -> str:
     return "\n".join(lines) + "\n"
 
 
-def as_json(r: Report) -> str:
+def org_markdown(r: OrgReport, top: int = 10) -> str:
+    t = r.total
+    share = (t.rerun_cost / t.cost * 100) if t.cost else 0.0
+    lines = [f"### runbill · org `{r.org}` since {r.since}", "",
+             f"**{t.billed_minutes:,.0f} billed minutes · {_money(t.cost)}** across "
+             f"{r.repo_active}/{r.repo_scanned} repos · {r.run_count} runs / {t.jobs} jobs · "
+             f"re-runs {share:.1f}% of cost", "",
+             "| Repo | Runs | Billed min | Cost | Share |", "|---|---:|---:|---:|---:|"]
+    for repo in r.repos[:top]:
+        pct = (repo.cost / t.cost * 100) if t.cost else 0.0
+        lines.append(f"| {repo.key} | {repo.runs} | {repo.billed_minutes:,.0f} | "
+                     f"{_money(repo.cost)} | {pct:.1f}% |")
+    lines += ["", f"_{_org_note(r)}_"]
+    if r.truncated:
+        lines.append("_Stopped at --max-runs on one or more repos; totals cover only the newest runs._")
+    return "\n".join(lines) + "\n"
+
+
+def as_json(r) -> str:
     return json.dumps(r.as_dict(), indent=2, ensure_ascii=False)
 
 
@@ -73,4 +121,15 @@ def as_csv(r: Report) -> str:
             d = x.as_dict()
             w.writerow([lvl, d["name"], d["runs"], d["jobs"], d["raw_minutes"], d["billed_minutes"],
                         d["cost_usd"], d["rerun_cost_usd"]])
+    return buf.getvalue()
+
+
+def org_csv(r: OrgReport) -> str:
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["level", "name", "runs", "jobs", "raw_minutes", "billed_minutes", "cost_usd", "rerun_cost_usd"])
+    for x in r.repos:
+        d = x.as_dict()
+        w.writerow(["repo", d["name"], d["runs"], d["jobs"], d["raw_minutes"], d["billed_minutes"],
+                    d["cost_usd"], d["rerun_cost_usd"]])
     return buf.getvalue()
