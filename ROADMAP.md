@@ -5,7 +5,7 @@
 - Re-run share; text/md/json/csv; `--fail-over` budget gate; composite GitHub Action with job summary
 
 ## v0.2
-- `runbill org ORG`: roll up across all repos of an org/user, ranked by cost
+- ~~`runbill org ORG`: roll up across all repos of an org/user, ranked by cost~~ (shipped)
 - Per-branch and per-event (push / pull_request / schedule) breakdown
 - Week-over-week diff (`--compare`) to catch a workflow that suddenly got expensive
 

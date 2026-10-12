@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `runbill org ORG`: roll up Actions cost across every repo of an org or user, ranked by cost (respects `--days` / `--since` / `--max-runs` per repo / `--top` / `--rate` / `--format` / `--fail-over`; skips archived repos by default).
+
 ## v0.1.1 (2026-10-10)
 - Landing page loads faster: static font instances and the hero scene is built after first paint (#6).
 - New visual identity: isometric brick-city landing page, cube-stack logo, OG image, social preview and docs theme; Marketplace branding `box` / `blue`.

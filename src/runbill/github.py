@@ -99,3 +99,29 @@ class Client:
             if len(batch) < 100:
                 return out
             page += 1
+
+    def list_repos(self, owner: str, include_archived: bool = False) -> List[dict]:
+        """List repos for an org or user. Tries /orgs/ first, then /users/."""
+        params = {"per_page": "100", "type": "all", "sort": "full_name"}
+        for kind in ("orgs", "users"):
+            out: List[dict] = []
+            page = 1
+            try:
+                while True:
+                    data = self.get(f"/{kind}/{owner}/repos", {**params, "page": str(page)})
+                    if not isinstance(data, list):
+                        break
+                    for r in data:
+                        if r.get("archived") and not include_archived:
+                            continue
+                        if r.get("disabled"):
+                            continue
+                        out.append(r)
+                    if len(data) < 100:
+                        return out
+                    page += 1
+            except GitHubError as e:
+                if "HTTP 404" in str(e):
+                    continue
+                raise
+        raise GitHubError(f"no such org or user: {owner}")
