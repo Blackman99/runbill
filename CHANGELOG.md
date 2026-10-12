@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+## v0.2.0 (2026-10-12)
 - `runbill org ORG`: roll up Actions cost across every repo of an org or user, ranked by cost (respects `--days` / `--since` / `--max-runs` per repo / `--top` / `--rate` / `--format` / `--fail-over`; skips archived repos by default).
 
 ## v0.1.1 (2026-10-10)
