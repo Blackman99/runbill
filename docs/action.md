@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: bill
-        uses: Blackman99/runbill@v0.2.0
+        uses: Blackman99/runbill@v0.3.0
         with:
           days: 7
           fail-over: 20   # optional: fail if the week's estimate is over $20
@@ -28,7 +28,7 @@ jobs:
 | `days` | `30` | look-back window |
 | `workflow` | all | only this workflow file |
 | `top` | `10` | rows per table |
-| `by` | none | add breakdowns: `branch`, `event`, or `branch,event` (unreleased: pin `@main` until the next tag) |
+| `by` | none | add breakdowns: `branch`, `event`, or `branch,event` |
 | `max-runs` | `500` | cap on runs fetched |
 | `fail-over` | none | fail the step above this USD estimate |
 | `token` | `github.token` | needs `actions:read` |

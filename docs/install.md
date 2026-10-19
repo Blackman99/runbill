@@ -7,7 +7,7 @@ pipx install git+https://github.com/Blackman99/runbill
 # or
 pip install git+https://github.com/Blackman99/runbill
 # or a pinned release wheel
-pip install https://github.com/Blackman99/runbill/releases/download/v0.2.0/runbill-0.2.0-py3-none-any.whl
+pip install https://github.com/Blackman99/runbill/releases/download/v0.3.0/runbill-0.3.0-py3-none-any.whl
 ```
 
 Check it: `runbill --version` and `runbill demo` (offline sample).
