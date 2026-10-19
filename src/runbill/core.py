@@ -5,7 +5,7 @@ import math
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 # USD per minute at GitHub list price, from the Actions runner pricing reference:
 # https://docs.github.com/en/billing/reference/actions-runner-pricing (checked 2026-10-10).
@@ -110,6 +110,36 @@ def job_seconds(job: dict) -> float:
     return max(0.0, (b - a).total_seconds())
 
 
+# Breakdowns `--by` can add to a report, and the run field each one groups on.
+GROUPINGS = ("branch", "event")
+NO_BRANCH = "(no branch)"
+UNKNOWN_EVENT = "(unknown event)"
+
+
+def branch_key(run: dict) -> str:
+    """The branch a run is billed to: its head branch, as GitHub shows it.
+
+    A pull request from a fork reports the fork's branch name (often `main`); it is shown as
+    `owner:branch`, the way GitHub's PR header does, so fork PRs never inflate your own `main`.
+    """
+    br = run.get("head_branch")
+    if not br:
+        return NO_BRANCH
+    head = (run.get("head_repository") or {}).get("full_name") or ""
+    base = (run.get("repository") or {}).get("full_name") or ""
+    if head and base and head.lower() != base.lower():
+        return f"{head.split('/')[0]}:{br}"
+    return br
+
+
+def event_key(run: dict) -> str:
+    """The trigger of a run (push, pull_request, schedule, workflow_dispatch, merge_group, ...).
+
+    Any event string GitHub sends is kept as-is, so new or rare triggers show up under their own name.
+    """
+    return run.get("event") or UNKNOWN_EVENT
+
+
 @dataclass
 class Line:
     key: str
@@ -120,6 +150,17 @@ class Line:
     cost: float = 0.0
     rerun_cost: float = 0.0
     by_sku: Dict[str, float] = field(default_factory=dict)
+
+    def absorb(self, other: "Line") -> None:
+        """Add another line's counts to this one (used for roll-ups and 'other N' rows)."""
+        self.runs += other.runs
+        self.jobs += other.jobs
+        self.seconds += other.seconds
+        self.billed_minutes += other.billed_minutes
+        self.cost += other.cost
+        self.rerun_cost += other.rerun_cost
+        for sku, mins in other.by_sku.items():
+            self.by_sku[sku] = self.by_sku.get(sku, 0.0) + mins
 
     def as_dict(self) -> dict:
         return {
@@ -141,10 +182,15 @@ class Report:
     jobs: List[Line]
     run_count: int
     truncated: bool = False
+    branches: List[Line] = field(default_factory=list)  # ranked by cost; see branch_key
+    events: List[Line] = field(default_factory=list)    # ranked by cost; see event_key
 
-    def as_dict(self) -> dict:
+    def groups(self, by: str) -> List[Line]:
+        return {"branch": self.branches, "event": self.events}[by]
+
+    def as_dict(self, by: Sequence[str] = ()) -> dict:
         t = self.total
-        return {
+        d = {
             "repo": self.repo, "since": self.since, "private": self.private,
             "runs": self.run_count, "truncated": self.truncated,
             "total": t.as_dict(),
@@ -152,6 +198,8 @@ class Report:
             "workflows": [w.as_dict() for w in self.workflows],
             "jobs": [j.as_dict() for j in self.jobs],
         }
+        _add_groups(d, self, by)
+        return d
 
 
 
@@ -169,10 +217,15 @@ class OrgReport:
     truncated: bool = False
     public_repos: int = 0
     private_repos: int = 0
+    branches: List[Line] = field(default_factory=list)  # key "repo › branch"
+    events: List[Line] = field(default_factory=list)    # summed across repos
 
-    def as_dict(self) -> dict:
+    def groups(self, by: str) -> List[Line]:
+        return {"branch": self.branches, "event": self.events}[by]
+
+    def as_dict(self, by: Sequence[str] = ()) -> dict:
         t = self.total
-        return {
+        d = {
             "org": self.org, "since": self.since, "private": self.private,
             "runs": self.run_count, "truncated": self.truncated,
             "repo_scanned": self.repo_scanned, "repo_active": self.repo_active,
@@ -181,6 +234,39 @@ class OrgReport:
             "rerun_share": round(t.rerun_cost / t.cost, 4) if t.cost else 0.0,
             "repos": [r.as_dict() for r in self.repos],
         }
+        _add_groups(d, self, by)
+        return d
+
+
+_JSON_KEY = {"branch": "branches", "event": "events"}
+
+
+def _add_groups(d: dict, rep, by: Sequence[str]) -> None:
+    for g in by:
+        d[_JSON_KEY[g]] = [x.as_dict() for x in rep.groups(g)]
+
+
+def _ranked(lines: Iterable[Line]) -> List[Line]:
+    return sorted(lines, key=lambda x: (-x.cost, -x.billed_minutes, x.key))
+
+
+def collapse(lines: Sequence[Line], top: int, noun: str) -> Tuple[List[Line], Optional[Line]]:
+    """Split ranked lines into the first `top` rows plus one 'N other <noun>' row for the rest.
+
+    `noun` is the plural ("branches", "events").
+
+    The shown rows plus the other row always add up to the full list, so a table never loses money.
+    A tail of a single line is shown as itself (a row saying '1 other branch' tells you less).
+    """
+    lines = list(lines)
+    top = max(1, top)
+    if len(lines) <= top + 1:
+        return lines, None
+    rest = lines[top:]
+    other = Line(f"{len(rest)} other {noun}")
+    for x in rest:
+        other.absorb(x)
+    return lines[:top], other
 
 
 def build_org_report(org: str, since: str, reports: Iterable[Report],
@@ -189,6 +275,8 @@ def build_org_report(org: str, since: str, reports: Iterable[Report],
     reports = list(reports)
     total = Line("total")
     lines: List[Line] = []
+    branches: Dict[str, Line] = {}
+    events: Dict[str, Line] = {}
     public_n = private_n = 0
     privacies: List[Optional[bool]] = []
     for rep in reports:
@@ -197,24 +285,16 @@ def build_org_report(org: str, since: str, reports: Iterable[Report],
             private_n += 1
         elif rep.private is False:
             public_n += 1
-        src = rep.total
         line = Line(rep.repo)
-        line.runs = src.runs
-        line.jobs = src.jobs
-        line.seconds = src.seconds
-        line.billed_minutes = src.billed_minutes
-        line.cost = src.cost
-        line.rerun_cost = src.rerun_cost
-        line.by_sku = dict(src.by_sku)
+        line.absorb(rep.total)
         lines.append(line)
-        total.runs += src.runs
-        total.jobs += src.jobs
-        total.seconds += src.seconds
-        total.billed_minutes += src.billed_minutes
-        total.cost += src.cost
-        total.rerun_cost += src.rerun_cost
-        for sku, mins in src.by_sku.items():
-            total.by_sku[sku] = total.by_sku.get(sku, 0.0) + mins
+        total.absorb(rep.total)
+        short = rep.repo.split("/", 1)[-1]
+        for b in rep.branches:
+            key = f"{short} › {b.key}"
+            branches.setdefault(key, Line(key)).absorb(b)
+        for e in rep.events:
+            events.setdefault(e.key, Line(e.key)).absorb(e)
     if privacies and all(p is False for p in privacies):
         private: Optional[bool] = False
     elif any(p is True for p in privacies):
@@ -223,11 +303,12 @@ def build_org_report(org: str, since: str, reports: Iterable[Report],
         private = None
     any_trunc = truncated or any(r.truncated for r in reports)
     return OrgReport(
-        org, since, private, total,
-        sorted(lines, key=lambda x: (-x.cost, -x.billed_minutes, x.key)),
+        org, since, private, total, _ranked(lines),
         total.runs, repo_scanned, len(lines), any_trunc,
         public_repos=public_n, private_repos=private_n,
+        branches=_ranked(branches.values()), events=_ranked(events.values()),
     )
+
 
 def build_report(repo: str, since: str, runs: Iterable[dict], jobs_by_run: Dict[int, List[dict]],
                  rates: Optional[Dict[str, float]] = None, private: Optional[bool] = None,
@@ -236,13 +317,18 @@ def build_report(repo: str, since: str, runs: Iterable[dict], jobs_by_run: Dict[
     total = Line("total")
     wf: Dict[str, Line] = {}
     jb: Dict[str, Line] = {}
+    br: Dict[str, Line] = {}
+    ev: Dict[str, Line] = {}
     n = 0
     for run in runs:
         n += 1
         wname = run.get("name") or run.get("path") or str(run.get("workflow_id"))
         w = wf.setdefault(wname, Line(wname))
-        w.runs += 1
-        total.runs += 1
+        bkey, ekey = branch_key(run), event_key(run)
+        b = br.setdefault(bkey, Line(bkey))
+        e = ev.setdefault(ekey, Line(ekey))
+        for line in (total, w, b, e):
+            line.runs += 1
         for job in jobs_by_run.get(run["id"], []):
             if job.get("conclusion") == "skipped":
                 continue
@@ -255,7 +341,9 @@ def build_report(repo: str, since: str, runs: Iterable[dict], jobs_by_run: Dict[
             rerun = (job.get("run_attempt") or 1) > 1
             jkey = f"{wname} › {job.get('name')}"
             j = jb.setdefault(jkey, Line(jkey))
-            for line in (total, w, j):
+            # Each job's rounded-up minutes land in exactly one workflow, branch and event,
+            # so every breakdown adds up to the same total.
+            for line in (total, w, j, b, e):
                 line.jobs += 1
                 line.seconds += secs
                 line.billed_minutes += billed
@@ -263,9 +351,8 @@ def build_report(repo: str, since: str, runs: Iterable[dict], jobs_by_run: Dict[
                 if rerun:
                     line.rerun_cost += cost
                 line.by_sku[sku] = line.by_sku.get(sku, 0.0) + billed
-    j_sorted = sorted(jb.values(), key=lambda x: (-x.cost, -x.billed_minutes, x.key))
+    j_sorted = _ranked(jb.values())
     for j in j_sorted:
         j.runs = 0
-    return Report(repo, since, private, total,
-                  sorted(wf.values(), key=lambda x: (-x.cost, -x.billed_minutes, x.key)),
-                  j_sorted, n, truncated)
+    return Report(repo, since, private, total, _ranked(wf.values()), j_sorted, n, truncated,
+                  branches=_ranked(br.values()), events=_ranked(ev.values()))

@@ -74,4 +74,14 @@ jobs:
           repo: Blackman99/certfan
           days: "14"
           top: "5"
-      - run: python3 -c "import json,sys; d=json.load(open('${{ steps.meter.outputs.report }}')); print(d['runs'], d['total']['billed_minutes']); assert d['runs']>0"
+          by: "branch,event"
+      - name: Check the JSON report (and that --by tables add up to the total)
+        run: |
+          python3 - "${{ steps.meter.outputs.report }}" <<'PY'
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          print(d["runs"], d["total"]["billed_minutes"], len(d["branches"]), "branches", len(d["events"]), "events")
+          assert d["runs"] > 0
+          for key in ("branches", "events"):
+              assert abs(sum(x["billed_minutes"] for x in d[key]) - d["total"]["billed_minutes"]) < 0.01, key
+          PY

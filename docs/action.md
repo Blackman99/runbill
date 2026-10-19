@@ -28,8 +28,9 @@ jobs:
 | `days` | `30` | look-back window |
 | `workflow` | all | only this workflow file |
 | `top` | `10` | rows per table |
+| `by` | none | add breakdowns: `branch`, `event`, or `branch,event` (unreleased: pin `@main` until the next tag) |
 | `max-runs` | `500` | cap on runs fetched |
 | `fail-over` | none | fail the step above this USD estimate |
 | `token` | `github.token` | needs `actions:read` |
 
-Output `report`: path to the JSON report.
+Output `report`: path to the JSON report (with `branches` / `events` arrays when `by` is set).
