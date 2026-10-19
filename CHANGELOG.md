@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- GitHub API calls now retry transient failures (HTTP 500/502/503/504, secondary rate limits, connection resets and timeouts) up to 3 times with exponential backoff (1s, 2s, 4s), honouring `Retry-After` (capped at 60s). Other 4xx errors still fail immediately.
+
 ## v0.3.0 (2026-10-19)
 - `--by branch` / `--by event` (or `--by branch,event`): break billed minutes and cost down by head branch and by trigger event (push, pull_request, schedule, workflow_dispatch, merge_group, …), ranked by cost. Same per-job round-up as everything else, so each table adds up to the total. Branches past `--top` fold into one `N other branches` row in text/Markdown; JSON (`branches`, `events`) and CSV (`level` `branch` / `event`) list them all. Fork PRs show as `owner:branch`; runs with no branch or event are kept under `(no branch)` / `(unknown event)`. Works in `runbill org` too (branches as `repo › branch`), in `runbill demo`, and as the Action's new `by` input.
 - Text table headers now line up with their columns; long names are cut with `…` (branch names keep their tail).
