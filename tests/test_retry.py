@@ -1,5 +1,6 @@
 import io
 import json
+import socket
 import urllib.error
 
 import pytest
@@ -52,9 +53,11 @@ def test_gives_up_after_bounded_retries(monkeypatch):
 
 
 def test_connection_errors_retry(monkeypatch):
-    c, _ = client(monkeypatch, [urllib.error.URLError("reset"), TimeoutError(), {"ok": 2}])
+    c, _ = client(monkeypatch, [
+        urllib.error.URLError("reset"), TimeoutError(), socket.timeout("read"), {"ok": 2},
+    ])
     assert c.get("/x") == {"ok": 2}
-    assert c.sleeps == [1.0, 2.0]
+    assert c.sleeps == [1.0, 2.0, 4.0]
 
 
 def test_retry_after_and_secondary_rate_limit(monkeypatch):

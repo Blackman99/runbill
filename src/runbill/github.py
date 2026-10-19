@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import socket
 import subprocess
 import time
 import urllib.error
@@ -91,7 +92,8 @@ class Client:
                 elif attempt:
                     hint = f" (after {attempt} retries)"
                 raise GitHubError(f"GET {url} -> HTTP {e.code}{hint}: {body}") from None
-            except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
+            # socket.timeout is an alias of TimeoutError only from 3.10; on 3.9 a read timeout is its own class.
+            except (urllib.error.URLError, ConnectionError, TimeoutError, socket.timeout) as e:
                 if attempt < MAX_RETRIES:
                     self._sleep(min(MAX_WAIT, BACKOFF * 2 ** attempt))
                     attempt += 1
