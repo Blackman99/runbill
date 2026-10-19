@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- `--by branch` / `--by event` (or `--by branch,event`): break billed minutes and cost down by head branch and by trigger event (push, pull_request, schedule, workflow_dispatch, merge_group, …), ranked by cost. Same per-job round-up as everything else, so each table adds up to the total. Branches past `--top` fold into one `N other branches` row in text/Markdown; JSON (`branches`, `events`) and CSV (`level` `branch` / `event`) list them all. Fork PRs show as `owner:branch`; runs with no branch or event are kept under `(no branch)` / `(unknown event)`. Works in `runbill org` too (branches as `repo › branch`), in `runbill demo`, and as the Action's new `by` input.
+- Text table headers now line up with their columns; long names are cut with `…` (branch names keep their tail).
+- `--top` must be 1 or more (was silently accepted as 0 or negative).
 
 ## v0.2.0 (2026-10-12)
 - `runbill org ORG`: roll up Actions cost across every repo of an org or user, ranked by cost (respects `--days` / `--since` / `--max-runs` per repo / `--top` / `--rate` / `--format` / `--fail-over`; skips archived repos by default).

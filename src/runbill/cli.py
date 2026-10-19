@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import os
 import re
 import subprocess
@@ -11,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from . import __version__, render
-from .core import DEFAULT_RATES, OrgReport, Report, build_org_report, build_report
+from .core import DEFAULT_RATES, GROUPINGS, OrgReport, Report, build_org_report, build_report
 from .github import Client, GitHubError, find_token
 
 
@@ -37,13 +38,54 @@ def _rates(items):
     return out
 
 
-def _emit(report, fmt, top, out):
+_BY_ALIASES = {"branches": "branch", "events": "event", "trigger": "event", "triggers": "event"}
+
+
+def _by_arg(value: str) -> List[str]:
+    """Parse one --by value: `branch`, `event` or a list like `branch,event` (commas or spaces)."""
+    out = []
+    for part in re.split(r"[,\s]+", value):
+        part = part.strip().lower()
+        if not part:
+            continue
+        part = _BY_ALIASES.get(part, part)
+        if part not in GROUPINGS:
+            close = difflib.get_close_matches(part, GROUPINGS, n=1)
+            hint = f" (did you mean {close[0]!r}?)" if close else ""
+            raise argparse.ArgumentTypeError(
+                f"{part!r} is not a breakdown{hint}; use branch, event, or branch,event")
+        out.append(part)
+    return out
+
+
+def _top_arg(value: str) -> int:
+    try:
+        n = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a whole number") from None
+    if n < 1:
+        raise argparse.ArgumentTypeError("must be 1 or more")
+    return n
+
+
+def _by(a) -> List[str]:
+    """Flatten repeated --by values, keeping the order given and dropping repeats."""
+    seen: List[str] = []
+    for chunk in getattr(a, "by", None) or []:
+        for g in chunk:
+            if g not in seen:
+                seen.append(g)
+    return seen
+
+
+def _emit(report, fmt, top, out, by=()):
     if isinstance(report, OrgReport):
-        s = {"text": lambda: render.org_text(report, top), "md": lambda: render.org_markdown(report, top),
-             "json": lambda: render.as_json(report), "csv": lambda: render.org_csv(report)}[fmt]()
+        s = {"text": lambda: render.org_text(report, top, by),
+             "md": lambda: render.org_markdown(report, top, by),
+             "json": lambda: render.as_json(report, by), "csv": lambda: render.org_csv(report, by)}[fmt]()
     else:
-        s = {"text": lambda: render.text(report, top), "md": lambda: render.markdown(report, top),
-             "json": lambda: render.as_json(report), "csv": lambda: render.as_csv(report)}[fmt]()
+        s = {"text": lambda: render.text(report, top, by), "md": lambda: render.markdown(report, top, by),
+             "json": lambda: render.as_json(report, by), "csv": lambda: render.as_csv(report, by)}[fmt]()
     if out:
         with open(out, "a" if out == os.environ.get("GITHUB_STEP_SUMMARY") else "w", encoding="utf-8") as f:
             f.write(s if s.endswith("\n") else s + "\n")
@@ -60,11 +102,20 @@ def _add_common(p: argparse.ArgumentParser, *, max_runs_default: int = 500) -> N
     p.add_argument("--since", help="start date YYYY-MM-DD (overrides --days)")
     p.add_argument("--max-runs", type=int, default=max_runs_default,
                    help=f"stop after N runs per repo (default {max_runs_default})")
-    p.add_argument("--top", type=int, default=10, help="rows per table (default 10)")
+    p.add_argument("--top", type=_top_arg, default=10,
+                   help="rows per table (default 10); with --by, the remaining branches/events are "
+                        "summed into one 'N other' row")
     p.add_argument("--rate", action="append", metavar="SKU=USD", help="override $/min, e.g. macos=0.08")
+    _add_by(p)
     p.add_argument("--format", choices=["text", "md", "json", "csv"], default="text")
     p.add_argument("--output", "-o", help="write to file instead of stdout")
     p.add_argument("--fail-over", type=float, metavar="USD", help="exit 3 if total cost exceeds USD")
+
+
+def _add_by(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--by", type=_by_arg, action="append", metavar="branch|event",
+                   help="also break minutes and cost down by branch and/or trigger event "
+                        "(push, pull_request, schedule, ...); e.g. --by branch,event")
 
 
 def _fetch_repo_report(cli: Client, full_name: str, private: Optional[bool], since: str,
@@ -107,7 +158,7 @@ def _cmd_report(a) -> int:
         print(f"runbill: {e}", file=sys.stderr)
         return 1
     rep = build_report(repo, since, runs, jobs, rates, private=meta.get("private"), truncated=truncated)
-    _emit(rep, a.format, a.top, a.output)
+    _emit(rep, a.format, a.top, a.output, _by(a))
     if a.fail_over is not None and rep.total.cost > a.fail_over:
         print(f"runbill: total ${rep.total.cost:.2f} is over --fail-over ${a.fail_over:.2f}", file=sys.stderr)
         return 3
@@ -162,7 +213,7 @@ def _cmd_org(a) -> int:
         print("runbill: every repo failed; check token scopes (actions:read) and rate limit", file=sys.stderr)
         return 1
     org_rep = build_org_report(owner, since, reports, repo_scanned=len(repos))
-    _emit(org_rep, a.format, a.top, a.output)
+    _emit(org_rep, a.format, a.top, a.output, _by(a))
     if a.fail_over is not None and org_rep.total.cost > a.fail_over:
         print(f"runbill: total ${org_rep.total.cost:.2f} is over --fail-over ${a.fail_over:.2f}",
               file=sys.stderr)
@@ -187,6 +238,8 @@ def main(argv=None) -> int:
                    help="include archived repos (skipped by default)")
     d = sub.add_parser("demo", help="offline sample report (no network)")
     d.add_argument("--format", choices=["text", "md", "json", "csv"], default="text")
+    d.add_argument("--top", type=_top_arg, default=10, help="rows per table (default 10)")
+    _add_by(d)
     sub.add_parser("rates", help="print the default $/min table")
 
     argv = list(sys.argv[1:] if argv is None else argv)
@@ -204,7 +257,7 @@ def main(argv=None) -> int:
         from .demo import sample
         runs, jobs = sample()
         rep = build_report("example/app", "2026-10-01", runs, jobs, private=True)
-        _emit(rep, a.format, 10, None)
+        _emit(rep, a.format, a.top, None, _by(a))
         return 0
     if a.cmd == "org":
         return _cmd_org(a)

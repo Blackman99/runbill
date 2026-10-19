@@ -1,5 +1,5 @@
 name: "runbill Actions minutes meter"
-description: "Per-workflow and per-job GitHub Actions billed minutes and cost in your job summary, with an optional budget gate."
+description: "Per-workflow, per-job, per-branch and per-event GitHub Actions minutes and cost in your job summary, with a budget gate."
 author: "Blackman99"
 branding:
   icon: "box"
@@ -17,6 +17,9 @@ inputs:
   top:
     description: "Rows per table"
     default: "10"
+  by:
+    description: "Also break the bill down by branch and/or trigger event: branch, event, or branch,event"
+    default: ""
   max-runs:
     description: "Stop after this many runs"
     default: "500"
@@ -43,11 +46,13 @@ runs:
         IN_DAYS: ${{ inputs.days }}
         IN_WF: ${{ inputs.workflow }}
         IN_TOP: ${{ inputs.top }}
+        IN_BY: ${{ inputs.by }}
         IN_MAX: ${{ inputs.max-runs }}
         IN_FAIL: ${{ inputs.fail-over }}
       run: |
         args=("$IN_REPO" --days "$IN_DAYS" --top "$IN_TOP" --max-runs "$IN_MAX")
         [ -n "$IN_WF" ] && args+=(--workflow "$IN_WF")
+        [ -n "$IN_BY" ] && args+=(--by "$IN_BY")
         out="$RUNNER_TEMP/runbill.json"
         python3 -m runbill report "${args[@]}" --format json -o "$out"
         echo "report=$out" >> "$GITHUB_OUTPUT"
