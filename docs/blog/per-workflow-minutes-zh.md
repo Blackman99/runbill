@@ -134,7 +134,7 @@ jobs:
   meter:
     runs-on: ubuntu-latest
     steps:
-      - uses: Blackman99/runbill@v0.2.0
+      - uses: Blackman99/runbill@v0.3.0
         with: { days: 7, fail-over: 20 }
 ```
 
