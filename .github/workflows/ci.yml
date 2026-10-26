@@ -71,7 +71,7 @@ jobs:
       - id: meter
         uses: ./
         with:
-          repo: Blackman99/certfan
+          repo: Blackman99/runbill
           days: "14"
           top: "5"
           by: "branch,event"
