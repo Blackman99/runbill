@@ -85,3 +85,23 @@ jobs:
           for key in ("branches", "events"):
               assert abs(sum(x["billed_minutes"] for x in d[key]) - d["total"]["billed_minutes"]) < 0.01, key
           PY
+      - id: diff
+        uses: ./
+        with:
+          repo: Blackman99/runbill
+          days: "7"
+          top: "5"
+          compare: "true"
+          fail-increase: "100000"
+      - name: Check the --compare JSON (both windows, and per-workflow deltas that add up)
+        run: |
+          python3 - "${{ steps.diff.outputs.report }}" <<'PY'
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          p, c = d["compare"]["previous"], d["compare"]["current"]
+          print(p["from"], p["runs"], "runs ->", c["from"], c["runs"], "runs;", d["total"]["delta"])
+          assert p["to"] == c["from"] and p["days"] == c["days"] == 7
+          dt = sum(w["delta"]["billed_minutes"] for w in d["workflows"])
+          assert abs(dt - d["total"]["delta"]["billed_minutes"]) < 0.01
+          assert all(w["status"] in ("new", "gone", "up", "down", "flat") for w in d["workflows"])
+          PY

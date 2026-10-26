@@ -11,12 +11,15 @@ runbill OWNER/REPO --format csv > minutes.csv
 runbill OWNER/REPO --fail-over 50  # exit 3 if the estimate is over $50
 runbill OWNER/REPO --by branch,event        # add per-branch and per-trigger tables
 runbill OWNER/REPO --by event --format md   # just the trigger table, as Markdown
+runbill OWNER/REPO --compare --days 7       # this week vs last week, per workflow and job
+runbill OWNER/REPO --compare --fail-increase 25   # exit 3 if cost rose more than 25%
 
 # whole org or user — repos ranked by cost
 runbill org your-org --days 30
 runbill org your-org --since 2026-09-01 --top 20 --format md
 runbill org your-user --max-runs 100 --fail-over 200
 runbill org your-org --by event               # triggers ranked by cost across all repos
+runbill org your-org --compare --days 7       # which repo got more expensive this week
 ```
 
 ## By branch and by event
@@ -59,6 +62,59 @@ $ runbill your-org/app --by branch,event --top 4
   `(no branch)` / `(unknown event)` rather than dropped.
 - In `runbill org`, events are summed across repos and branches are written `repo › branch`.
 - `--branch NAME` (a filter) and `--by branch` (a breakdown) combine: filter to `main`, then split it by event.
+
+## Week over week
+
+`--compare` answers "what got more expensive?". It splits time into two windows of the same length that
+touch: the one you asked for (`--days N` or `--since DATE`, ending now) and the one right before it. Every
+workflow and job gets billed minutes and cost for both, the change in dollars and percent, and the rows are
+sorted by **biggest cost increase first**:
+
+```console
+$ runbill demo --compare --top 4
+runbill · example/app · last 7 days vs the 7 days before
+
+  now     2026-10-01 09:00 → 2026-10-08 09:00 UTC   97 runs
+  before  2026-09-24 09:00 → 2026-10-01 09:00 UTC   93 runs
+
+  TOTAL   $8.26 → $42.47   +$34.20 (+414.0%)   billed min 1,021 → 1,672 (+651)
+  Biggest increase: CI +$32.08 (+560.4%), led by test (macos) +$30.38 (new).
+
+  BY WORKFLOW                   min before   min now  cost before   cost now      Δ cost      Δ %
+  CI                                   702     1,400        $5.72     $37.80     +$32.08  +560.4%
+  E2E nightly                          153       196        $0.92      $4.31      +$3.39  +369.7%
+  Release                                –        26            –      $0.05      +$0.05      new
+  Docs                                  62        50        $0.37      $0.30      -$0.07   -19.4%
+  Benchmarks                           104         –        $1.25          –      -$1.25     gone
+
+  BY JOB                        min before   min now  cost before   cost now      Δ cost      Δ %
+  CI › test (macos)                      –       490            –     $30.38     +$30.38      new
+  E2E nightly › playwright             153       196        $0.92      $4.31      +$3.39  +369.7%
+  CI › test (windows)                  378       490        $3.78      $4.90      +$1.12   +29.6%
+  CI › test (ubuntu)                   270       350        $1.62      $2.10      +$0.48   +29.6%
+  5 other jobs (2 new, 1 gone)         220       146        $1.94      $0.77      -$1.17   -60.2%
+
+  Sorted by Δ cost, biggest increase first. new = no runs before; gone = no runs now.
+  List-price estimate. Jobs rounded up to whole minutes; runner type and size from labels.
+```
+
+- **Equal windows.** `--days 7` compares the last 7×24 hours with the 7×24 hours before that (both to the
+  minute, in UTC), so a busy Monday never lands on only one side. `--since 2026-10-01` compares
+  2026-10-01 00:00 UTC → now with the same length of time before it. Because the window ends at the current
+  minute rather than at the start of a day, the "now" totals can differ slightly from a plain report.
+- **new / gone.** A workflow or job that only ran in the current window is `new`; one that only ran before
+  is `gone` (deleted workflow, removed matrix leg, renamed job). A row that existed before but cost $0 (e.g. a
+  self-hosted job) and now costs money shows `from $0` rather than a made-up percentage.
+- **One fetch.** runbill pulls runs once, back to the start of the earlier window, and files each run under a
+  window by its `created_at`. `--max-runs` applies **per window**; if the cap is hit before reaching the start
+  of the earlier window, runbill warns that the "before" side is incomplete and increases are overstated.
+- **Folding.** `--top` keeps the biggest movers and sums the rest into one `N other workflows (2 new, 1 gone)`
+  row, so the table still adds up. JSON and CSV list every row.
+- **`--by branch,event`** adds the same before/now diff per branch and per trigger event.
+- **`runbill org ORG --compare`** diffs repos instead of workflows: a repo with no runs before is `new`.
+- **Gate.** `--fail-increase PCT` exits 3 when total cost rose by more than PCT percent (`25` or `25%`) and
+  needs `--compare` (without it runbill stops with a usage error). If the earlier window cost $0, runbill notes it and does
+  not fail. `--fail-over USD` still applies to the current window.
 
 ## Org rollup
 

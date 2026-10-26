@@ -43,26 +43,41 @@ def _trigger(wname, i, pr_branches):
     return "workflow_dispatch", "main", REPO
 
 
-def sample():
-    base = datetime(2026, 10, 1, 9, 0, tzinfo=timezone.utc)
-    specs = [  # workflow, [(job, labels, seconds)], count, rerun_every
-        ("CI", [("test (ubuntu)", ["ubuntu-latest"], 250), ("test (macos)", ["macos-14"], 410),
-                ("test (windows)", ["windows-latest"], 380), ("lint", ["ubuntu-latest"], 35)], 60, 6),
-        ("E2E nightly", [("playwright", ["ubuntu-latest-8-cores"], 1260)], 9, 0),
-        ("Docs", [("build", ["ubuntu-latest"], 70)], 25, 0),
-        ("Release", [("publish", ["ubuntu-latest"], 140), ("sign", ["self-hosted", "linux"], 300)], 3, 0),
-    ]
+BASE = datetime(2026, 10, 1, 9, 0, tzinfo=timezone.utc)  # start of the demo's current week
+
+# workflow, [(job, labels, seconds)], count, rerun_every
+_THIS_WEEK = [
+    ("CI", [("test (ubuntu)", ["ubuntu-latest"], 250), ("test (macos)", ["macos-14"], 410),
+            ("test (windows)", ["windows-latest"], 380), ("lint", ["ubuntu-latest"], 35)], 60, 6),
+    ("E2E nightly", [("playwright", ["ubuntu-latest-8-cores"], 1260)], 9, 0),
+    ("Docs", [("build", ["ubuntu-latest"], 70)], 25, 0),
+    ("Release", [("publish", ["ubuntu-latest"], 140), ("sign", ["self-hosted", "linux"], 300)], 3, 0),
+]
+
+# The week before, for `runbill demo --compare`: no macOS leg in CI yet, E2E still on a standard runner,
+# a Benchmarks workflow that was deleted since, a bit more Docs churn, and no release.
+_LAST_WEEK = [
+    ("CI", [("test (ubuntu)", ["ubuntu-latest"], 250), ("test (windows)", ["windows-latest"], 380),
+            ("lint", ["ubuntu-latest"], 35)], 48, 8),
+    ("E2E nightly", [("playwright", ["ubuntu-latest"], 1260)], 7, 0),
+    ("Docs", [("build", ["ubuntu-latest"], 70)], 31, 0),
+    ("Benchmarks", [("bench", ["ubuntu-latest-4-cores"], 840)], 7, 0),
+]
+
+
+def _build(specs, base, rid):
     runs, jobs = [], {}
-    rid = 1000
     pr_branches = _pr_branch_sequence()
     for wname, js, count, rerun_every in specs:
         for i in range(count):
             rid += 1
             t0 = base + timedelta(hours=i * 3)
+            # Runs are spread evenly over the week (job timings above stay as they are).
+            created = base + timedelta(seconds=i * 7 * 86400 // count)
             attempts = 2 if rerun_every and i % rerun_every == 0 else 1
             event, branch, head_repo = _trigger(wname, i, pr_branches)
             runs.append({"id": rid, "name": wname, "status": "completed", "run_attempt": attempts,
-                         "event": event, "head_branch": branch,
+                         "event": event, "head_branch": branch, "created_at": _iso(created),
                          "head_repository": {"full_name": head_repo}, "repository": {"full_name": REPO}})
             lst = []
             for a in range(1, attempts + 1):
@@ -72,3 +87,16 @@ def sample():
                                 "started_at": _iso(s), "completed_at": _iso(s + timedelta(seconds=secs + i % 7))})
             jobs[rid] = lst
     return runs, jobs
+
+
+def sample():
+    """One week of runs from BASE: (runs, jobs_by_run_id)."""
+    return _build(_THIS_WEEK, BASE, 1000)
+
+
+def sample_two_weeks():
+    """Two back-to-back weeks for `demo --compare`, newest run first like the API: (runs, jobs, now)."""
+    cur_runs, cur_jobs = sample()
+    prev_runs, prev_jobs = _build(_LAST_WEEK, BASE - timedelta(days=7), 5000)
+    runs = sorted(cur_runs + prev_runs, key=lambda r: r["created_at"], reverse=True)
+    return runs, {**cur_jobs, **prev_jobs}, BASE + timedelta(days=7)

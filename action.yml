@@ -1,5 +1,5 @@
 name: "runbill Actions minutes meter"
-description: "Per-workflow, per-job, per-branch and per-event GitHub Actions minutes and cost in your job summary, with a budget gate."
+description: "Per-workflow, per-job, per-branch and per-event GitHub Actions minutes and cost in your job summary, week-over-week diff, budget gates."
 author: "Blackman99"
 branding:
   icon: "box"
@@ -26,6 +26,12 @@ inputs:
   fail-over:
     description: "Fail the step if the estimated total cost (USD) is over this amount"
     default: ""
+  compare:
+    description: "Compare with the window just before, of the same length (days: 7 = last 7 days vs the 7 before): per-workflow and per-job change, biggest increase first. true or false"
+    default: "false"
+  fail-increase:
+    description: "Fail the step if total cost rose more than this percent over the previous window (turns on compare)"
+    default: ""
   token:
     description: "Token with actions:read on the repo"
     default: ${{ github.token }}
@@ -49,13 +55,21 @@ runs:
         IN_BY: ${{ inputs.by }}
         IN_MAX: ${{ inputs.max-runs }}
         IN_FAIL: ${{ inputs.fail-over }}
+        IN_COMPARE: ${{ inputs.compare }}
+        IN_FAIL_INC: ${{ inputs.fail-increase }}
       run: |
         args=("$IN_REPO" --days "$IN_DAYS" --top "$IN_TOP" --max-runs "$IN_MAX")
         [ -n "$IN_WF" ] && args+=(--workflow "$IN_WF")
         [ -n "$IN_BY" ] && args+=(--by "$IN_BY")
+        case "$(printf '%s' "$IN_COMPARE" | tr '[:upper:]' '[:lower:]')" in
+          true|yes|1|on) args+=(--compare) ;;
+          false|no|0|off|"") if [ -n "$IN_FAIL_INC" ]; then args+=(--compare); fi ;;
+          *) echo "::error::runbill: input compare must be true or false, got '$IN_COMPARE'"; exit 2 ;;
+        esac
         out="$RUNNER_TEMP/runbill.json"
         python3 -m runbill report "${args[@]}" --format json -o "$out"
         echo "report=$out" >> "$GITHUB_OUTPUT"
         fail=()
-        [ -n "$IN_FAIL" ] && fail=(--fail-over "$IN_FAIL")
+        [ -n "$IN_FAIL" ] && fail+=(--fail-over "$IN_FAIL")
+        [ -n "$IN_FAIL_INC" ] && fail+=(--fail-increase "$IN_FAIL_INC")
         python3 -m runbill report "${args[@]}" --format md -o "$GITHUB_STEP_SUMMARY" "${fail[@]}"

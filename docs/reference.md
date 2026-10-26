@@ -3,7 +3,7 @@
 ```text
 runbill [report] [OWNER/REPO] [options]
 runbill org ORG [options]
-runbill demo [--format text|md|json|csv] [--top N] [--by branch|event]
+runbill demo [--format text|md|json|csv] [--top N] [--by branch|event] [--compare]
 runbill rates
 runbill --version
 ```
@@ -25,8 +25,10 @@ in both (org branch rows are `repo › branch`).
 | `--format` | `text` | `text`, `md`, `json`, `csv` |
 | `-o, --output FILE` | stdout | write to a file (appends if it is `$GITHUB_STEP_SUMMARY`) |
 | `--fail-over USD` | | exit 3 if the total estimate is above USD |
+| `--compare` | | diff the window against the equal-length window right before it (per workflow, job, repo, and `--by` rows) |
+| `--fail-increase PCT` | | with `--compare`: exit 3 if total cost rose more than PCT percent (`25` or `25%`) |
 
-Exit codes: `0` ok, `1` GitHub API error, `2` usage error (including a bad `--by` or `--top`), `3` over budget.
+Exit codes: `0` ok, `1` GitHub API error, `2` usage error (including a bad `--by`, `--top`, `--since` in the future, or `--fail-increase` without `--compare`), `3` over budget or over the allowed increase.
 
 ## JSON shape
 
@@ -57,3 +59,26 @@ Org report (`runbill org`):
  "repo_scanned": 12, "repo_active": 5, "public_repos": 1, "private_repos": 4,
  "total": {...}, "rerun_share": 0.1, "repos": [{"name": "acme/app", "runs": 97, ...}, ...]}
 ```
+
+Comparison (`--compare`): both windows with their own totals, then one row per workflow / job (or repo for
+`org`, plus `branches` / `events` with `--by`), sorted by `delta.cost_usd`, never folded. `status` is
+`new`, `gone`, `up`, `down` or `flat`; `cost_pct` is `null` when the earlier cost was $0.
+
+```json
+{"repo": "example/app", "private": true,
+ "compare": {"previous": {"from": "2026-09-24T09:00:00Z", "to": "2026-10-01T09:00:00Z", "days": 7.0,
+                          "runs": 93, "truncated": false, "total": {"billed_minutes": 1021.0, "cost_usd": 8.262, ...}},
+             "current":  {"from": "2026-10-01T09:00:00Z", "to": "2026-10-08T09:00:00Z", "days": 7.0,
+                          "runs": 97, "truncated": false, "total": {...}}},
+ "total": {"name": "total", "status": "up",
+           "previous": {"runs": 93, "jobs": 207, "billed_minutes": 1021.0, "cost_usd": 8.262},
+           "current":  {"runs": 97, "jobs": 320, "billed_minutes": 1672.0, "cost_usd": 42.466},
+           "delta":    {"runs": 4, "jobs": 113, "billed_minutes": 651.0, "cost_usd": 34.204, "cost_pct": 413.99}},
+ "workflows": [{"name": "CI", "status": "up", "previous": {...}, "current": {...},
+                "delta": {"billed_minutes": 698.0, "cost_usd": 32.076, "cost_pct": 560.38, ...}},
+               {"name": "Benchmarks", "status": "gone", ...}],
+ "jobs": [...]}
+```
+
+CSV: `level,name,status,runs_before,runs_now,jobs_before,jobs_now,billed_minutes_before,billed_minutes_now,cost_usd_before,cost_usd_now,delta_billed_minutes,delta_cost_usd,delta_cost_pct`,
+total row first.
