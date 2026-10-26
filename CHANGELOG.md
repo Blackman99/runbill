@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.4.0 (2026-10-26)
 - `--compare`: week-over-week diff. Compares the window (`--days N` / `--since DATE`) with the equal-length window right before it: billed minutes and cost per workflow and per job for both, change in $ and %, sorted by biggest cost increase first; `new` / `gone` rows marked, `from $0` instead of a divide-by-zero. Works with `--by branch,event`, in `runbill org` (repos), in `runbill demo --compare`, and in every format (JSON has both windows, their totals and per-row deltas; CSV has before/now/delta columns). Runs are fetched once and split by `created_at`; `--max-runs` applies per window.
 - `--fail-increase PCT` (with `--compare`): exit 3 if total cost rose by more than PCT percent.
 - Action: new `compare` and `fail-increase` inputs; the job summary shows the diff.

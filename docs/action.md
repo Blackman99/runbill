@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: bill
-        uses: Blackman99/runbill@v0.3.0
+        uses: Blackman99/runbill@v0.4.0
         with:
           days: 7
           fail-over: 20   # optional: fail if the week's estimate is over $20
@@ -41,7 +41,7 @@ comparison shape from the [reference](reference.md#json-shape) when `compare` is
 Week over week, posted every Monday, failing when the bill jumps by more than a quarter:
 
 ```yaml
-      - uses: Blackman99/runbill@v0.3.0   # `compare` needs the next release, or @main
+      - uses: Blackman99/runbill@v0.4.0
         with:
           days: 7
           compare: true

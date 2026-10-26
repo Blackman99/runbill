@@ -99,7 +99,7 @@ As a GitHub Action (writes the report to the job summary):
 ```yaml
 permissions: { actions: read, contents: read }
 steps:
-  - uses: Blackman99/runbill@v0.3.0
+  - uses: Blackman99/runbill@v0.4.0
     with: { days: 7, fail-over: 20 }
   # or week over week: with: { days: 7, compare: true, fail-increase: 25 }
 ```
