@@ -68,6 +68,32 @@ runbill org your-org --days 30
 runbill org your-org --by event    # which triggers cost the most, across every repo
 ```
 
+Catch the workflow that suddenly got expensive: `--compare` diffs this window against the one right before it (same length), per workflow and per job, biggest cost increase first:
+
+```bash
+runbill --compare --days 7                      # last 7 days vs the 7 days before
+runbill --compare --days 7 --fail-increase 25   # exit 3 if cost rose more than 25%
+```
+
+```text
+$ runbill demo --compare
+runbill · example/app · last 7 days vs the 7 days before
+
+  now     2026-10-01 09:00 → 2026-10-08 09:00 UTC   97 runs
+  before  2026-09-24 09:00 → 2026-10-01 09:00 UTC   93 runs
+
+  TOTAL   $8.26 → $42.47   +$34.20 (+414.0%)   billed min 1,021 → 1,672 (+651)
+  Biggest increase: CI +$32.08 (+560.4%), led by test (macos) +$30.38 (new).
+
+  BY WORKFLOW                   min before   min now  cost before   cost now      Δ cost      Δ %
+  CI                                   702     1,400        $5.72     $37.80     +$32.08  +560.4%
+  E2E nightly                          153       196        $0.92      $4.31      +$3.39  +369.7%
+  Release                                –        26            –      $0.05      +$0.05      new
+  Docs                                  62        50        $0.37      $0.30      -$0.07   -19.4%
+  Benchmarks                           104         –        $1.25          –      -$1.25     gone
+  …
+```
+
 As a GitHub Action (writes the report to the job summary):
 
 ```yaml
@@ -75,6 +101,7 @@ permissions: { actions: read, contents: read }
 steps:
   - uses: Blackman99/runbill@v0.3.0
     with: { days: 7, fail-over: 20 }
+  # or week over week: with: { days: 7, compare: true, fail-increase: 25 }
 ```
 
 Docs: **https://blackman99.github.io/runbill/docs/** · Estimates at list price, not an invoice. MIT.

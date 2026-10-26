@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from . import __version__, render
+from .compare import Comparison, Window, build_comparison, compare_windows, increase_over, split_runs
 from .core import DEFAULT_RATES, GROUPINGS, OrgReport, Report, build_org_report, build_report
 from .github import Client, GitHubError, find_token
 
@@ -79,7 +80,11 @@ def _by(a) -> List[str]:
 
 
 def _emit(report, fmt, top, out, by=()):
-    if isinstance(report, OrgReport):
+    if isinstance(report, Comparison):
+        s = {"text": lambda: render.compare_text(report, top, by),
+             "md": lambda: render.compare_markdown(report, top, by),
+             "json": lambda: render.compare_json(report, by), "csv": lambda: render.compare_csv(report, by)}[fmt]()
+    elif isinstance(report, OrgReport):
         s = {"text": lambda: render.org_text(report, top, by),
              "md": lambda: render.org_markdown(report, top, by),
              "json": lambda: render.as_json(report, by), "csv": lambda: render.org_csv(report, by)}[fmt]()
@@ -110,6 +115,25 @@ def _add_common(p: argparse.ArgumentParser, *, max_runs_default: int = 500) -> N
     p.add_argument("--format", choices=["text", "md", "json", "csv"], default="text")
     p.add_argument("--output", "-o", help="write to file instead of stdout")
     p.add_argument("--fail-over", type=float, metavar="USD", help="exit 3 if total cost exceeds USD")
+    _add_compare(p)
+    p.add_argument("--fail-increase", type=_pct_arg, metavar="PCT",
+                   help="with --compare: exit 3 if total cost rose more than PCT%% over the previous window")
+
+
+def _pct_arg(value: str) -> float:
+    try:
+        n = float(value.strip().rstrip("%"))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a percentage like 25") from None
+    if n < 0:
+        raise argparse.ArgumentTypeError("must be 0 or more (it is the allowed increase)")
+    return n
+
+
+def _add_compare(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--compare", action="store_true",
+                   help="compare with the window just before, of the same length (e.g. --days 7: the last "
+                        "7 days vs the 7 before): per-workflow and per-job change, biggest increase first")
 
 
 def _add_by(p: argparse.ArgumentParser) -> None:
@@ -119,16 +143,32 @@ def _add_by(p: argparse.ArgumentParser) -> None:
 
 
 def _fetch_repo_report(cli: Client, full_name: str, private: Optional[bool], since: str,
-                       max_runs: int, rates: dict) -> Optional[Report]:
-    """Fetch runs+jobs for one repo. Returns None if no completed runs (or Actions unavailable)."""
+                       max_runs: int, rates: dict,
+                       windows: "tuple[Window, Window] | None" = None):
+    """Fetch runs+jobs for one repo. Returns None if no completed runs (or Actions unavailable).
+
+    With `windows` (previous, current) it fetches once from the previous window's start and returns a
+    (previous, current) pair of Reports instead.
+    """
+    if windows is not None:
+        since, fetch_cap = windows[0].start.strftime("%Y-%m-%d"), 2 * max_runs + 1
+    else:
+        fetch_cap = max_runs + 1
     try:
-        runs = list(cli.runs(full_name, since, max_runs + 1))
+        runs = list(cli.runs(full_name, since, fetch_cap))
     except GitHubError as e:
         msg = str(e)
         # Actions disabled / no access → skip quietly
         if "HTTP 404" in msg or "HTTP 409" in msg:
             return None
         raise
+    if windows is not None:
+        keep = _in_windows(runs, windows[0], windows[1], max_runs)
+        if not keep:
+            return None
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            jobs = dict(zip([x["id"] for x in keep], ex.map(lambda x: cli.jobs(full_name, x["id"]), keep)))
+        return _split_reports(full_name, runs, jobs, windows[0], windows[1], max_runs, rates, private)
     if not runs:
         return None
     truncated = len(runs) > max_runs
@@ -138,11 +178,72 @@ def _fetch_repo_report(cli: Client, full_name: str, private: Optional[bool], sin
     return build_report(full_name, since, runs, jobs, rates, private=private, truncated=truncated)
 
 
+def _now() -> datetime:
+    return datetime.now(timezone.utc).replace(second=0, microsecond=0)
+
+
+def _windows(a) -> "tuple[Window, Window] | None":
+    """(previous, current) for --compare, or None (after printing why) if the options don't allow it."""
+    try:
+        return compare_windows(_now(), a.days, a.since)
+    except ValueError as e:
+        print(f"runbill: {e}", file=sys.stderr)
+        return None
+
+
+def _check_compare_flags(a) -> bool:
+    if getattr(a, "fail_increase", None) is not None and not a.compare:
+        print("runbill: --fail-increase needs --compare (it checks the change against the previous window)",
+              file=sys.stderr)
+        return False
+    return True
+
+
+def _gates(total_cost: float, a, cmp: "Comparison | None" = None) -> int:
+    """Budget gates after the report is written: --fail-over, then --fail-increase. Exit 3 if either trips."""
+    code = 0
+    if a.fail_over is not None and total_cost > a.fail_over:
+        print(f"runbill: total ${total_cost:.2f} is over --fail-over ${a.fail_over:.2f}", file=sys.stderr)
+        code = 3
+    if cmp is not None and getattr(a, "fail_increase", None) is not None:
+        over, pct = increase_over(cmp, a.fail_increase)
+        before, now = cmp.previous.total.cost, cmp.current.total.cost
+        if pct is None:
+            print(f"runbill: previous window cost $0.00, so there is no percentage to check against "
+                  f"--fail-increase {a.fail_increase:g}% (now ${now:.2f})", file=sys.stderr)
+        elif over:
+            print(f"runbill: total cost up {pct:.1f}% (${before:.2f} → ${now:.2f}), over --fail-increase "
+                  f"{a.fail_increase:g}%", file=sys.stderr)
+            code = 3
+    return code
+
+
+def _split_reports(name: str, runs: List[dict], jobs: dict, prev_w: Window, cur_w: Window, max_runs: int,
+                   rates: dict, private: Optional[bool]) -> "tuple[Report, Report]":
+    prev_runs, cur_runs, prev_trunc, cur_trunc = split_runs(runs, prev_w, cur_w, max_runs)
+    label = "%Y-%m-%d %H:%M"
+    prev = build_report(name, prev_w.start.strftime(label), prev_runs, jobs, rates, private=private,
+                        truncated=prev_trunc)
+    cur = build_report(name, cur_w.start.strftime(label), cur_runs, jobs, rates, private=private,
+                       truncated=cur_trunc)
+    return prev, cur
+
+
+def _in_windows(runs: List[dict], prev_w: Window, cur_w: Window, max_runs: int) -> List[dict]:
+    """The runs split_runs will keep, so jobs are fetched only for those."""
+    p, c, _, _ = split_runs(runs, prev_w, cur_w, max_runs)
+    return c + p
+
+
 def _cmd_report(a) -> int:
     repo = a.repo or _detect_repo()
     if not repo or "/" not in repo:
         print("runbill: give OWNER/REPO (could not detect it from git origin)", file=sys.stderr)
         return 2
+    if not _check_compare_flags(a):
+        return 2
+    if a.compare:
+        return _cmd_report_compare(a, repo)
     since = _since(a)
     rates = _rates(a.rate)
     cli = Client(find_token())
@@ -159,10 +260,32 @@ def _cmd_report(a) -> int:
         return 1
     rep = build_report(repo, since, runs, jobs, rates, private=meta.get("private"), truncated=truncated)
     _emit(rep, a.format, a.top, a.output, _by(a))
-    if a.fail_over is not None and rep.total.cost > a.fail_over:
-        print(f"runbill: total ${rep.total.cost:.2f} is over --fail-over ${a.fail_over:.2f}", file=sys.stderr)
-        return 3
-    return 0
+    return _gates(rep.total.cost, a)
+
+
+def _cmd_report_compare(a, repo: str) -> int:
+    windows = _windows(a)
+    if windows is None:
+        return 2
+    prev_w, cur_w = windows
+    rates = _rates(a.rate)
+    cli = Client(find_token())
+    try:
+        meta = cli.repo(repo)
+        # One fetch from the start of the previous window (its date; the API filters by day), newest first,
+        # capped at --max-runs per window; split_runs files each run by created_at.
+        runs = list(cli.runs(repo, prev_w.start.strftime("%Y-%m-%d"), 2 * a.max_runs + 1, a.workflow, a.branch))
+        keep = _in_windows(runs, prev_w, cur_w, a.max_runs)
+        print(f"runbill: fetching jobs for {len(keep)} runs across both windows…", file=sys.stderr)
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            jobs = dict(zip([x["id"] for x in keep], ex.map(lambda x: cli.jobs(repo, x["id"]), keep)))
+    except GitHubError as e:
+        print(f"runbill: {e}", file=sys.stderr)
+        return 1
+    prev, cur = _split_reports(repo, runs, jobs, prev_w, cur_w, a.max_runs, rates, meta.get("private"))
+    cmp = build_comparison(prev, cur, prev_w, cur_w, days=None if a.since else a.days)
+    _emit(cmp, a.format, a.top, a.output, _by(a))
+    return _gates(cur.total.cost, a, cmp)
 
 
 def _cmd_org(a) -> int:
@@ -171,7 +294,14 @@ def _cmd_org(a) -> int:
         print("runbill: give an ORG or USER login (not OWNER/REPO); use `runbill report` for one repo",
               file=sys.stderr)
         return 2
-    since = _since(a)
+    if not _check_compare_flags(a):
+        return 2
+    windows = None
+    if a.compare:
+        windows = _windows(a)
+        if windows is None:
+            return 2
+    since = _since(a) if windows is None else windows[0].start.strftime("%Y-%m-%d")
     rates = _rates(a.rate)
     cli = Client(find_token())
     try:
@@ -182,14 +312,16 @@ def _cmd_org(a) -> int:
     if not repos:
         print(f"runbill: no repos found for {owner}", file=sys.stderr)
         return 1
-    print(f"runbill: scanning {len(repos)} repos for {owner} since {since}…", file=sys.stderr)
-    reports: List[Report] = []
+    span = f"since {since}" if windows is None else f"from {since} (both windows)"
+    print(f"runbill: scanning {len(repos)} repos for {owner} {span}…", file=sys.stderr)
+    reports: list = []
     errors: List[str] = []
     # Up to 4 repos in parallel; each repo fans out its own job fetches (see _fetch_repo_report).
     # Org scans burn the rate limit fast — narrow --days / --max-runs if you hit 403.
     with ThreadPoolExecutor(max_workers=4) as ex:
         futs = {
-            ex.submit(_fetch_repo_report, cli, r["full_name"], r.get("private"), since, a.max_runs, rates): r
+            ex.submit(_fetch_repo_report, cli, r["full_name"], r.get("private"), since, a.max_runs, rates,
+                      windows): r
             for r in repos
         }
         done = 0
@@ -205,20 +337,30 @@ def _cmd_org(a) -> int:
                 continue
             if rep is not None:
                 reports.append(rep)
-                print(f"runbill: [{done}/{len(repos)}] {name}: "
-                      f"{rep.run_count} runs, ${rep.total.cost:.2f}", file=sys.stderr)
+                if isinstance(rep, tuple):
+                    print(f"runbill: [{done}/{len(repos)}] {name}: ${rep[0].total.cost:.2f} → "
+                          f"${rep[1].total.cost:.2f}", file=sys.stderr)
+                else:
+                    print(f"runbill: [{done}/{len(repos)}] {name}: "
+                          f"{rep.run_count} runs, ${rep.total.cost:.2f}", file=sys.stderr)
             elif done % 10 == 0 or done == len(repos):
                 print(f"runbill: [{done}/{len(repos)}] …", file=sys.stderr)
     if not reports and errors and len(errors) == len(repos):
         print("runbill: every repo failed; check token scopes (actions:read) and rate limit", file=sys.stderr)
         return 1
+    if windows is not None:
+        prev_w, cur_w = windows
+        # A repo only counts as active in a window where it actually ran.
+        prev_org = build_org_report(owner, prev_w.start.strftime("%Y-%m-%d %H:%M"),
+                                    [p for p, _ in reports if p.run_count], repo_scanned=len(repos))
+        cur_org = build_org_report(owner, cur_w.start.strftime("%Y-%m-%d %H:%M"),
+                                   [c for _, c in reports if c.run_count], repo_scanned=len(repos))
+        cmp = build_comparison(prev_org, cur_org, prev_w, cur_w, days=None if a.since else a.days)
+        _emit(cmp, a.format, a.top, a.output, _by(a))
+        return _gates(cur_org.total.cost, a, cmp)
     org_rep = build_org_report(owner, since, reports, repo_scanned=len(repos))
     _emit(org_rep, a.format, a.top, a.output, _by(a))
-    if a.fail_over is not None and org_rep.total.cost > a.fail_over:
-        print(f"runbill: total ${org_rep.total.cost:.2f} is over --fail-over ${a.fail_over:.2f}",
-              file=sys.stderr)
-        return 3
-    return 0
+    return _gates(org_rep.total.cost, a)
 
 
 def main(argv=None) -> int:
@@ -240,6 +382,7 @@ def main(argv=None) -> int:
     d.add_argument("--format", choices=["text", "md", "json", "csv"], default="text")
     d.add_argument("--top", type=_top_arg, default=10, help="rows per table (default 10)")
     _add_by(d)
+    _add_compare(d)
     sub.add_parser("rates", help="print the default $/min table")
 
     argv = list(sys.argv[1:] if argv is None else argv)
@@ -254,7 +397,13 @@ def main(argv=None) -> int:
             print(f"{k:<20} ${v:.3f}/min")
         return 0
     if a.cmd == "demo":
-        from .demo import sample
+        from .demo import sample, sample_two_weeks
+        if a.compare:
+            runs, jobs, now = sample_two_weeks()
+            prev_w, cur_w = compare_windows(now, days=7)
+            prev, cur = _split_reports("example/app", runs, jobs, prev_w, cur_w, 500, {}, True)
+            _emit(build_comparison(prev, cur, prev_w, cur_w, days=7), a.format, a.top, None, _by(a))
+            return 0
         runs, jobs = sample()
         rep = build_report("example/app", "2026-10-01", runs, jobs, private=True)
         _emit(rep, a.format, a.top, None, _by(a))

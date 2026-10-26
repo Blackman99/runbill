@@ -31,6 +31,19 @@ jobs:
 | `by` | none | add breakdowns: `branch`, `event`, or `branch,event` |
 | `max-runs` | `500` | cap on runs fetched |
 | `fail-over` | none | fail the step above this USD estimate |
+| `compare` | `false` | `true`: compare the window with the one right before it (week over week with `days: 7`) |
+| `fail-increase` | none | fail the step if cost rose more than this percent; turns on `compare` |
 | `token` | `github.token` | needs `actions:read` |
 
-Output `report`: path to the JSON report (with `branches` / `events` arrays when `by` is set).
+Output `report`: path to the JSON report (with `branches` / `events` arrays when `by` is set; the
+comparison shape from the [reference](reference.md#json-shape) when `compare` is on).
+
+Week over week, posted every Monday, failing when the bill jumps by more than a quarter:
+
+```yaml
+      - uses: Blackman99/runbill@v0.3.0   # `compare` needs the next release, or @main
+        with:
+          days: 7
+          compare: true
+          fail-increase: 25
+```

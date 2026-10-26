@@ -7,7 +7,7 @@
 ## v0.2
 - ~~`runbill org ORG`: roll up across all repos of an org/user, ranked by cost~~ (shipped)
 - ~~Per-branch and per-event (push / pull_request / schedule) breakdown~~ (shipped: `--by branch,event`)
-- Week-over-week diff (`--compare`) to catch a workflow that suddenly got expensive
+- ~~Week-over-week diff (`--compare`) to catch a workflow that suddenly got expensive~~ (shipped: `--compare`)
 
 ## v0.3
 - Import GitHub's billing usage-report CSV to calibrate rates against the real invoice
